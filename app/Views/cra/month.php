@@ -88,9 +88,11 @@ $ys['nr'] = max(0, $ouvrables - $ys['p'] - $ys['t'] - $ys['r'] - $ys['c'] - $ys[
           if (!empty($notes[$date])) $cls .= ' has-note';
         ?>
         <div class="<?=$cls?>"
+          data-date="<?=$date?>"
+          data-type="<?= $type ?? '' ?>"
           <?php if (!$isWe && !$readonly): ?>
-            onclick="clickDay('<?=$date?>',<?=json_encode($type)?>)"
-            ondblclick="openNote('<?=$date?>')"
+            onclick="clickDay(this)"
+            ondblclick="openNote(this.dataset.date)"
           <?php endif; ?>
           title="<?=$date?><?=!empty($notes[$date])?' — '.htmlspecialchars($notes[$date]):''?>"
         ><?=$d?></div>
@@ -153,14 +155,23 @@ function setMode(m){
 }
 setMode('p');
 
-function clickDay(date, current){
-  let newType = (mode === 'none' || current === mode) ? null : mode;
-  document.querySelectorAll('.cal-day').forEach(el => {
-    if (el.title && el.title.startsWith(date)) {
-      el.className = el.className.replace(/\s*d[ptrcfs]/g,'');
-      if (newType) el.classList.add('d'+newType);
-    }
-  });
+function clickDay(el){
+  const date    = el.dataset.date;
+  const current = el.dataset.type || null;  // toujours à jour
+  const newType = (mode === 'none' || current === mode) ? null : mode;
+
+  // Mettre à jour le data-type immédiatement
+  el.dataset.type = newType || '';
+
+  // Mettre à jour les classes CSS
+  // Supprimer toute classe de type existante (format: espace + d + une lettre)
+  el.className = el.className
+    .split(' ')
+    .filter(cls => !/^d[ptrcfs]$/.test(cls))
+    .join(' ');
+
+  if (newType) el.classList.add('d' + newType);
+
   saveDay(date, newType);
 }
 
@@ -177,10 +188,9 @@ function submitNote(){
   const content = document.getElementById('noteContent').value;
   notes[activeNoteDate] = content;
   saveNote(activeNoteDate, content);
-  document.querySelectorAll('.cal-day').forEach(el => {
-    if (el.title && el.title.startsWith(activeNoteDate))
-      el.classList.toggle('has-note', !!content.trim());
-  });
+  // Mettre à jour l'indicateur de note sur la bonne cellule
+  const noteEl = document.querySelector(`.cal-day[data-date="${activeNoteDate}"]`);
+  if (noteEl) noteEl.classList.toggle('has-note', !!content.trim());
   closeNote();
 }
 
