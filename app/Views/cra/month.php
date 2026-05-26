@@ -32,9 +32,10 @@ $ys['nr'] = max(0, $ouvrables - $ys['p'] - $ys['t'] - $ys['r'] - $ys['c'] - $ys[
     <?= $mnames[$month] ?> <?= $year ?>
   </div>
   <div class="topbar-actions">
-    <a class="btn btn-sm" href="<?=BASE_URL?><?=$urlPfx?>month/<?=$prevY?>/<?=$prevM?>">← <?=$mnames[$prevM]?></a>
-    <a class="btn btn-sm" href="<?=BASE_URL?><?= $readonly && $target ? "view/{$target['id']}/" : 'cra/' ?>year/<?=$year?>">📅 <?=$year?></a>
-    <a class="btn btn-sm" href="<?=BASE_URL?><?=$urlPfx?>month/<?=$nextY?>/<?=$nextM?>"><?=$mnames[$nextM]?> →</a>
+    <?php $navPfx = $urlPfx ?: 'cra/'; ?>
+    <a class="btn btn-sm" href="<?=BASE_URL?><?=$navPfx?>month/<?=$prevY?>/<?=$prevM?>">← <?=$mnames[$prevM]?></a>
+    <a class="btn btn-sm" href="<?=BASE_URL?><?=$navPfx?>year/<?=$year?>">📅 <?=$year?></a>
+    <a class="btn btn-sm" href="<?=BASE_URL?><?=$navPfx?>month/<?=$nextY?>/<?=$nextM?>"><?=$mnames[$nextM]?> →</a>
     <?php if (!$readonly): ?>
     <a class="btn btn-sm" href="<?=BASE_URL?>cra/export/<?=$year?>">⬇ CSV <?=$year?></a>
     <?php endif; ?>

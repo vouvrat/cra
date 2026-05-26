@@ -13,8 +13,9 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
     <?= $readonly && $target ? '👁 '.htmlspecialchars($target['name']).' — ' : '' ?>Vue annuelle <?= $year ?>
   </div>
   <div class="topbar-actions">
-    <button class="btn btn-sm btn-year" onclick="location.href='<?=BASE_URL?><?=$urlPfx?>year/<?=$year-1?>'">← <?=$year-1?></button>
-    <button class="btn btn-sm btn-year" onclick="location.href='<?=BASE_URL?><?=$urlPfx?>year/<?=$year+1?>'"><?=$year+1?> →</button>
+    <?php $navPfx = $urlPfx ?: 'cra/'; ?>
+    <button class="btn btn-sm btn-year" onclick="location.href='<?=BASE_URL?><?=$navPfx?>year/<?=$year-1?>'">← <?=$year-1?></button>
+    <button class="btn btn-sm btn-year" onclick="location.href='<?=BASE_URL?><?=$navPfx?>year/<?=$year+1?>'"><?=$year+1?> →</button>
     <?php if (!$readonly): ?>
     <a class="btn btn-sm" href="<?=BASE_URL?>cra/export/<?=$year?>">⬇ CSV</a>
     <?php else: ?>
