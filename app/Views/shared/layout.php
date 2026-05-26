@@ -218,11 +218,53 @@ tr.total td{border-top:1px solid var(--bd);font-weight:700;color:var(--ac);backg
   .month-layout{grid-template-columns:1fr}
 }
 @media(max-width:700px){
-  .sidebar{display:none}
+  /* Barre de navigation mobile */
+  .mobile-topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--bd);
+    position:sticky;top:0;z-index:150;
+  }
+  .mobile-topbar-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700}
+  /* Sidebar masquée par défaut sur mobile — s'ouvre via hamburger */
+  .sidebar{
+    transform:translateX(-100%);
+    transition:transform .25s cubic-bezier(.4,0,.2,1);
+    width:260px;
+    z-index:200;
+    box-shadow:4px 0 20px rgba(0,0,0,.4);
+  }
+  .sidebar.open{transform:translateX(0)}
+  /* Overlay sombre derrière la sidebar */
+  .sb-overlay{
+    display:none;position:fixed;inset:0;
+    background:rgba(0,0,0,.5);z-index:199;
+    backdrop-filter:blur(2px);
+  }
+  .sb-overlay.open{display:block}
+  /* Bouton hamburger dans la topbar */
+  .hamburger{
+    display:flex;flex-direction:column;justify-content:center;gap:5px;
+    width:36px;height:36px;cursor:pointer;
+    background:var(--bg3);border:1px solid var(--bd);
+    border-radius:var(--rad);padding:8px;flex-shrink:0;
+  }
+  .hamburger span{
+    display:block;height:2px;background:var(--tx);
+    border-radius:1px;transition:all .2s;
+  }
+  .hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .hamburger.open span:nth-child(2){opacity:0;transform:scaleX(0)}
+  .hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
   .main{margin-left:0}
   .year-grid{grid-template-columns:repeat(2,1fr)}
   .stats-grid{grid-template-columns:repeat(3,1fr)}
-  .content{padding:16px}
+  .content{padding:14px}
+  .topbar{padding:10px 14px}
+}
+@media(min-width:701px){
+  .hamburger{display:none}
+  .sb-overlay{display:none!important}
+  .mobile-topbar{display:none}
 }
 
 /* ── THEME TOGGLE SLIDER ──────────────────────────── */
@@ -250,7 +292,8 @@ $isAdmin = ($me['role'] ?? '') === 'admin';
 ?>
 
 <!-- SIDEBAR -->
-<div class="sidebar">
+<div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
   <div class="sb-logo">
     <h1>CRA <?= $curYear ?></h1>
     <span>SUIVI D'ACTIVITÉ</span>
@@ -329,6 +372,14 @@ $isAdmin = ($me['role'] ?? '') === 'admin';
 
 <!-- MAIN -->
 <div class="main">
+  <!-- Barre mobile avec bouton hamburger (visible uniquement < 700px) -->
+  <div class="mobile-topbar">
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <span class="mobile-topbar-title">CRA <?= $curYear ?></span>
+    <div style="width:36px"></div><!-- spacer pour centrer le titre -->
+  </div>
   <div id="toast"></div>
 
   <?php if (!empty($flash)): ?>
@@ -387,6 +438,31 @@ function saveConfig(km,duree,indem){
     body:new URLSearchParams({km,duree,indem})})
   .then(r=>r.json()).then(d=>d.ok?showToast('Config sauvegardée ✓'):showToast('Erreur',false));
 }
+
+// ── MENU MOBILE ──────────────────────────────────────────────────────────────
+function toggleSidebar(){
+  const sb  = document.getElementById('sidebar');
+  const ov  = document.getElementById('sbOverlay');
+  const hb  = document.getElementById('hamburger');
+  const open = sb.classList.toggle('open');
+  ov.classList.toggle('open', open);
+  hb.classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sbOverlay').classList.remove('open');
+  document.getElementById('hamburger').classList.remove('open');
+  document.body.style.overflow = '';
+}
+// Fermer la sidebar sur clic d'un lien (navigation mobile)
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.sb-link, .sb-footer a').forEach(el => {
+    el.addEventListener('click', () => {
+      if (window.innerWidth <= 700) closeSidebar();
+    });
+  });
+});
 
 // ── THEME TOGGLE ──────────────────────────────────────────────────────────────
 (function(){
