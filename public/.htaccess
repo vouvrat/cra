@@ -1,0 +1,30 @@
+Options -Indexes -ExecCGI
+RewriteEngine On
+
+# Force HTTPS (décommenter en production derrière un reverse proxy)
+# RewriteCond %{HTTP:X-Forwarded-Proto} !https
+# RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Protéger les fichiers sensibles (hors PHP)
+<FilesMatch "\.(sql|sqlite|json|log|env|sh|md)$">
+    Require all denied
+</FilesMatch>
+
+# Bloquer l'accès direct aux fichiers PHP autres qu'index.php
+# Note: on utilise RewriteRule plutôt que FilesMatch pour éviter
+# les conflits d'ordre de traitement Apache
+RewriteCond %{REQUEST_FILENAME} \.php$
+RewriteCond %{REQUEST_FILENAME} !index\.php$
+RewriteRule ^ - [F,L]
+
+# Routing MVC — tout ce qui n'est pas un fichier/dossier réel → index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]
+
+# Headers de sécurité Apache
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "DENY"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

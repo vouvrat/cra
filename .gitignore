@@ -1,0 +1,25 @@
+# Données persistantes — ne jamais versionner
+data/*.sqlite
+data/*.sqlite-wal
+data/*.sqlite-shm
+data/archives/
+data/*.tar.gz
+
+# Backups générés par deploy.sh
+cra_backup_*.tar.gz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# PHP
+/vendor/
+
+# Logs
+*.log

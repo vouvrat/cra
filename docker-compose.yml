@@ -1,0 +1,19 @@
+services:
+  cra:
+    build: .
+    container_name: cra-app
+    restart: unless-stopped
+    ports:
+      - "8080:80"          # Changer 8080 par le port souhaité
+    volumes:
+      - cra_data:/var/www/html/data   # Persistance BDD + archives
+    environment:
+      - APACHE_RUN_USER=www-data
+      - APACHE_RUN_GROUP=www-data
+    labels:
+      # Optionnel : si tu utilises Traefik (Home Assistant / Nginx Proxy Manager)
+      - "traefik.enable=false"
+
+volumes:
+  cra_data:
+    driver: local
