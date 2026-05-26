@@ -27,7 +27,6 @@ class DB {
                 active     INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT    NOT NULL DEFAULT (datetime('now'))
             );
-
             CREATE TABLE IF NOT EXISTS teams (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
                 name       TEXT    NOT NULL,
@@ -35,7 +34,6 @@ class DB {
                 created_at TEXT    NOT NULL DEFAULT (datetime('now')),
                 FOREIGN KEY(owner_id) REFERENCES users(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS team_members (
                 id        INTEGER PRIMARY KEY AUTOINCREMENT,
                 team_id   INTEGER NOT NULL,
@@ -44,7 +42,6 @@ class DB {
                 FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE,
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS days (
                 id      INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -53,7 +50,6 @@ class DB {
                 UNIQUE(user_id, date),
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS notes (
                 id      INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -62,7 +58,6 @@ class DB {
                 UNIQUE(user_id, date),
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS user_config (
                 id      INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -71,7 +66,18 @@ class DB {
                 UNIQUE(user_id, key),
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             );
-
+            CREATE TABLE IF NOT EXISTS config_periods (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id    INTEGER NOT NULL,
+                km         REAL    NOT NULL DEFAULT 0,
+                duree      REAL    NOT NULL DEFAULT 0,
+                indem      REAL    NOT NULL DEFAULT 0,
+                valid_from TEXT    NOT NULL,
+                valid_to   TEXT,
+                label      TEXT    NOT NULL DEFAULT '',
+                created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
             CREATE TABLE IF NOT EXISTS delegations (
                 id        INTEGER PRIMARY KEY AUTOINCREMENT,
                 owner_id  INTEGER NOT NULL,
@@ -80,7 +86,6 @@ class DB {
                 FOREIGN KEY(owner_id)  REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY(viewer_id) REFERENCES users(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS archives (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
                 year       INTEGER NOT NULL,
@@ -96,12 +101,30 @@ class DB {
             );
         ");
 
-        // Migrations incrémentales (BDD existante)
-        $cols = ['virtual INTEGER NOT NULL DEFAULT 0'];
-        foreach ($cols as $col) {
+        // Migrations incrémentales (colonnes ajoutées progressivement)
+        foreach (['virtual INTEGER NOT NULL DEFAULT 0'] as $col) {
             try { self::$pdo->exec("ALTER TABLE users ADD COLUMN $col"); } catch (\Throwable) {}
         }
         try { self::$pdo->exec("ALTER TABLE archives ADD COLUMN team_id INTEGER"); } catch (\Throwable) {}
+
+        // Migrer l'ancienne config à plat vers config_periods si vide
+        $existing = self::$pdo->query("SELECT COUNT(*) FROM config_periods")->fetchColumn();
+        if ($existing == 0) {
+            $stmt = self::$pdo->query("SELECT DISTINCT user_id FROM user_config");
+            foreach ($stmt->fetchAll(\PDO::FETCH_COLUMN) as $uid) {
+                $s = self::$pdo->prepare("SELECT key,value FROM user_config WHERE user_id=?");
+                $s->execute([$uid]);
+                $km=40; $duree=60; $indem=0;
+                foreach ($s->fetchAll() as $r) {
+                    if ($r['key']==='km')    $km    = (float)$r['value'];
+                    if ($r['key']==='duree') $duree = (float)$r['value'];
+                    if ($r['key']==='indem') $indem = (float)$r['value'];
+                }
+                self::$pdo->prepare(
+                    "INSERT INTO config_periods (user_id,km,duree,indem,valid_from,label) VALUES (?,?,?,?,?,?)"
+                )->execute([$uid, $km, $duree, $indem, '2024-01-01', 'Configuration initiale (migrée)']);
+            }
+        }
 
         // Admin par défaut
         $count = self::$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();

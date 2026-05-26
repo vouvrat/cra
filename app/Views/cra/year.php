@@ -2,9 +2,20 @@
 $ys     = $yearStats;
 $worked = $ys['p'] + $ys['t'];
 $pct    = $worked ? round($ys['p'] / $worked * 100) : 0;
-$km     = (float)($config['km']   ?? 40);
-$dur    = (float)($config['duree']?? 60);
+// Config courante (pour les stats annuelles globales = config active aujourd'hui)
+$km     = (float)($config['km']   ?? 0);
+$dur    = (float)($config['duree']?? 0);
 $indem  = (float)($config['indem'] ?? 0);
+// Totaux annuels pondérés par config historique
+$totalKm    = 0; $totalDur = 0; $totalIndem = 0;
+if (!empty($configByMonth)) {
+    foreach ($configByMonth as $mIdx => $mcfg) {
+        $ms = $stats[$mIdx] ?? ['p'=>0];
+        $totalKm    += $ms['p'] * $mcfg['km'];
+        $totalDur   += $ms['p'] * $mcfg['duree'];
+        $totalIndem += $ms['p'] * $mcfg['indem'];
+    }
+}
 $urlPfx = $readonly && $target ? "view/{$target['id']}/" : '';
 $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 ?>
@@ -43,21 +54,152 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
     <div class="stat-card cs"><div class="stat-lbl">SANS SOLDE</div><div class="stat-val"><?=$ys['s']?></div></div>
     <div class="stat-card cf"><div class="stat-lbl">JOURS FÉRIÉS</div><div class="stat-val"><?=$ys['f']?></div></div>
     <div class="stat-card cw"><div class="stat-lbl">TRAVAILLÉ</div><div class="stat-val"><?=$worked?></div><div class="stat-sub"><?=$pct?>% présent.</div></div>
-    <?php if ($km>0): ?><div class="stat-card ckm"><div class="stat-lbl">KM TRAJET</div><div class="stat-val"><?=number_format($ys['p']*$km,0,',',' ')?></div><div class="stat-sub">km</div></div><?php endif; ?>
-    <?php if ($indem>0): ?><div class="stat-card ckm"><div class="stat-lbl">INDEMNITÉS</div><div class="stat-val"><?=number_format($ys['p']*$indem,2,',',' ')?> €</div></div><?php endif; ?>
+    <?php if ($totalKm>0): ?><div class="stat-card ckm"><div class="stat-lbl">KM TRAJET</div><div class="stat-val"><?=number_format($totalKm,0,',',' ')?></div><div class="stat-sub">km sur l'année</div></div><?php endif; ?>
+    <?php if ($totalIndem>0): ?><div class="stat-card ckm"><div class="stat-lbl">INDEMNITÉS</div><div class="stat-val"><?=number_format($totalIndem,2,',',' ')?> €</div></div><?php endif; ?>
   </div>
 
   <?php if (!$readonly): ?>
-  <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rad);padding:14px;margin-bottom:20px">
-    <div style="font-size:10px;color:var(--mu);font-family:'DM Mono',monospace;letter-spacing:.06em;margin-bottom:10px">PARAMÈTRES DE TRAJET</div>
-    <div class="cfg-row">
-      <div class="cfg-field"><label>KM A/R</label><input type="number" id="cfgKm" value="<?=$km?>" min="0"></div>
-      <div class="cfg-field"><label>DURÉE A/R (MIN)</label><input type="number" id="cfgDur" value="<?=$dur?>" min="0"></div>
-      <div class="cfg-field"><label>INDEMNITÉ/JOUR (€)</label><input type="number" id="cfgIndem" value="<?=$indem?>" min="0" step="0.5"></div>
-      <button class="btn btn-sm" onclick="saveConfig(document.getElementById('cfgKm').value,document.getElementById('cfgDur').value,document.getElementById('cfgIndem').value)">Enregistrer</button>
+  <!-- ── PÉRIODES DE CONFIGURATION ── -->
+  <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rad);margin-bottom:20px;overflow:hidden">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--mu);letter-spacing:.06em">PARAMÈTRES DE TRAJET</span>
+        <span style="font-size:11px;color:var(--mu);margin-left:10px">— Historique des distances/durées par période</span>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="openPeriodModal()">+ Nouvelle période</button>
     </div>
+
+    <?php if (empty($configPeriods)): ?>
+    <div style="padding:16px;font-size:12px;color:var(--mu);text-align:center">
+      Aucune configuration. Ajoutez une période pour calculer vos trajets.
+    </div>
+    <?php else: ?>
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr>
+          <th style="text-align:left;font-size:10px;font-family:'DM Mono',monospace;color:var(--mu);padding:8px 14px;border-bottom:1px solid var(--bd);letter-spacing:.04em">LIBELLÉ</th>
+          <th style="text-align:left;font-size:10px;font-family:'DM Mono',monospace;color:var(--mu);padding:8px 14px;border-bottom:1px solid var(--bd)">DU</th>
+          <th style="text-align:left;font-size:10px;font-family:'DM Mono',monospace;color:var(--mu);padding:8px 14px;border-bottom:1px solid var(--bd)">AU</th>
+          <th style="text-align:center;font-size:10px;font-family:'DM Mono',monospace;color:var(--mu);padding:8px 14px;border-bottom:1px solid var(--bd)">KM A/R</th>
+          <th style="text-align:center;font-size:10px;font-family:'DM Mono',monospace;color:var(--mu);padding:8px 14px;border-bottom:1px solid var(--bd)">DURÉE (MIN)</th>
+          <th style="text-align:center;font-size:10px;font-family:'DM Mono',monospace;color:var(--mu);padding:8px 14px;border-bottom:1px solid var(--bd)">INDEM./J</th>
+          <th style="padding:8px 14px;border-bottom:1px solid var(--bd)"></th>
+        </tr>
+      </thead>
+      <tbody>
+      <?php foreach ($configPeriods as $period): ?>
+      <?php $isCurrent = is_null($period['valid_to']); ?>
+      <tr style="<?= $isCurrent ? 'background:rgba(108,99,255,.05)' : '' ?>">
+        <td style="padding:9px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #1e1e24">
+          <?= htmlspecialchars($period['label']) ?>
+          <?php if ($isCurrent): ?>
+          <span style="font-size:10px;background:rgba(34,197,94,.12);color:var(--t);border-radius:3px;padding:1px 6px;font-family:'DM Mono',monospace;margin-left:6px;font-weight:400">ACTUELLE</span>
+          <?php endif; ?>
+        </td>
+        <td style="padding:9px 14px;font-size:12px;font-family:'DM Mono',monospace;border-bottom:1px solid #1e1e24;color:var(--mu)">
+          <?= date('d/m/Y', strtotime($period['valid_from'])) ?>
+        </td>
+        <td style="padding:9px 14px;font-size:12px;font-family:'DM Mono',monospace;border-bottom:1px solid #1e1e24;color:var(--mu)">
+          <?= $period['valid_to'] ? date('d/m/Y', strtotime($period['valid_to'])) : '<span style="color:var(--t)">En cours</span>' ?>
+        </td>
+        <td style="padding:9px 14px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid #1e1e24"><?= $period['km'] ?></td>
+        <td style="padding:9px 14px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid #1e1e24"><?= $period['duree'] ?></td>
+        <td style="padding:9px 14px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid #1e1e24"><?= $period['indem'] > 0 ? $period['indem'].' €' : '—' ?></td>
+        <td style="padding:9px 14px;border-bottom:1px solid #1e1e24">
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            <button class="btn btn-sm" onclick='openPeriodModal(<?= htmlspecialchars(json_encode($period)) ?>)'>✏</button>
+            <?php if (count($configPeriods) > 1): ?>
+            <form method="POST" action="<?= BASE_URL ?>cra/config/period/delete" onsubmit="return confirm('Supprimer cette période ?')">
+              <input type="hidden" name="_csrf" value="<?= $_csrf ?? '' ?>">
+              <input type="hidden" name="period_id" value="<?= $period['id'] ?>">
+              <input type="hidden" name="year" value="<?= $year ?>">
+              <?php if (!empty($target)): ?><input type="hidden" name="target_id" value="<?= $target['id'] ?>"><?php endif; ?>
+              <button type="submit" class="btn btn-sm btn-danger">✕</button>
+            </form>
+            <?php endif; ?>
+          </div>
+        </td>
+      </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+    <?php endif; ?>
   </div>
   <?php endif; ?>
+
+  <!-- MODAL PÉRIODE -->
+  <div class="modal-backdrop" id="periodModal">
+    <div class="modal" style="width:480px">
+      <h3 id="periodModalTitle">Nouvelle période de configuration</h3>
+      <form method="POST" action="<?= BASE_URL ?>cra/config/period" id="periodForm">
+        <input type="hidden" name="_csrf" value="<?= $_csrf ?? '' ?>">
+        <input type="hidden" name="period_id" id="periodId" value="0">
+        <input type="hidden" name="year" value="<?= $year ?>">
+        <?php if (!empty($target)): ?><input type="hidden" name="target_id" value="<?= $target['id'] ?>"><?php endif; ?>
+        <div class="form-group">
+          <label>LIBELLÉ (ex: Après déménagement, Nouveau poste…)</label>
+          <input type="text" name="label" id="periodLabel" placeholder="Description de ce changement" required>
+        </div>
+        <div class="form-group">
+          <label>DATE D'EFFET</label>
+          <input type="date" name="valid_from" id="periodFrom" required value="<?= date('Y-m-d') ?>">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>DISTANCE A/R (KM)</label>
+            <input type="number" name="km" id="periodKm" min="0" max="9999" step="0.5" value="0">
+          </div>
+          <div class="form-group">
+            <label>DURÉE A/R (MIN)</label>
+            <input type="number" name="duree" id="periodDuree" min="0" max="999" value="0">
+          </div>
+          <div class="form-group">
+            <label>INDEMNITÉ/JOUR (€)</label>
+            <input type="number" name="indem" id="periodIndem" min="0" max="999" step="0.5" value="0">
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--mu);margin-bottom:14px">
+          Les périodes précédentes sont automatiquement clôturées à la date d'effet - 1 jour.
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" onclick="closePeriodModal()">Annuler</button>
+          <button type="submit" class="btn btn-primary" id="periodSubmitBtn">Ajouter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  function openPeriodModal(period) {
+    const modal = document.getElementById('periodModal');
+    if (period) {
+      document.getElementById('periodModalTitle').textContent = 'Modifier la période';
+      document.getElementById('periodId').value    = period.id;
+      document.getElementById('periodLabel').value = period.label;
+      document.getElementById('periodFrom').value  = period.valid_from;
+      document.getElementById('periodKm').value    = period.km;
+      document.getElementById('periodDuree').value = period.duree;
+      document.getElementById('periodIndem').value = period.indem;
+      document.getElementById('periodSubmitBtn').textContent = 'Enregistrer';
+    } else {
+      document.getElementById('periodModalTitle').textContent = 'Nouvelle période';
+      document.getElementById('periodId').value    = '0';
+      document.getElementById('periodLabel').value = '';
+      document.getElementById('periodFrom').value  = new Date().toISOString().split('T')[0];
+      document.getElementById('periodKm').value    = '0';
+      document.getElementById('periodDuree').value = '0';
+      document.getElementById('periodIndem').value = '0';
+      document.getElementById('periodSubmitBtn').textContent = 'Ajouter';
+    }
+    modal.classList.add('open');
+  }
+  function closePeriodModal() {
+    document.getElementById('periodModal').classList.remove('open');
+  }
+  document.getElementById('periodModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closePeriodModal();
+  });
+  </script>
 
   <!-- YEAR GRID -->
   <div class="year-grid">
@@ -100,8 +242,8 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
         <th style="color:var(--r)">RTT</th><th style="color:var(--c)">CP</th>
         <th style="color:var(--s)">SS</th>
         <th style="color:var(--f)">FÉRIÉS</th><th>NR</th><th>TRAVAILLÉ</th>
-        <?php if ($km>0): ?><th style="color:#a78bfa">KM</th><?php endif; ?>
-        <?php if ($indem>0): ?><th style="color:#a78bfa">INDEM.</th><?php endif; ?>
+        <?php if ($totalKm>0): ?><th style="color:#a78bfa">KM</th><?php endif; ?>
+        <?php if ($totalIndem>0): ?><th style="color:#a78bfa">INDEM.</th><?php endif; ?>
       </tr></thead>
       <tbody>
       <?php for ($m=1; $m<=12; $m++):
@@ -121,8 +263,9 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
         <td style="color:var(--f);font-family:'DM Mono',monospace"><?=$s['f']?></td>
         <td style="color:var(--mu);font-family:'DM Mono',monospace"><?=$s['nr']?></td>
         <td style="font-weight:700;font-family:'DM Mono',monospace"><?=$w?></td>
-        <?php if ($km>0): ?><td style="color:#a78bfa;font-family:'DM Mono',monospace"><?=round($s['p']*$km)?></td><?php endif; ?>
-        <?php if ($indem>0): ?><td style="color:#a78bfa;font-family:'DM Mono',monospace"><?=number_format($s['p']*$indem,2,',',' ')?>€</td><?php endif; ?>
+        <?php $mc=$configByMonth[$m]??['km'=>0,'indem'=>0]; ?>
+        <?php if ($totalKm>0): ?><td style="color:#a78bfa;font-family:'DM Mono',monospace"><?=round($s['p']*$mc['km'])?></td><?php endif; ?>
+        <?php if ($totalIndem>0): ?><td style="color:#a78bfa;font-family:'DM Mono',monospace"><?=number_format($s['p']*$mc['indem'],2,',',' ')?>€</td><?php endif; ?>
       </tr>
       <?php endfor; ?>
       </tbody>
@@ -139,8 +282,8 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
         <td style="font-family:'DM Mono',monospace"><?=$ys['f']?></td>
         <td style="font-family:'DM Mono',monospace">—</td>
         <td style="font-family:'DM Mono',monospace"><?=$tw?></td>
-        <?php if ($km>0): ?><td style="font-family:'DM Mono',monospace"><?=round($ys['p']*$km)?></td><?php endif; ?>
-        <?php if ($indem>0): ?><td style="font-family:'DM Mono',monospace"><?=number_format($ys['p']*$indem,2,',',' ')?>€</td><?php endif; ?>
+        <?php if ($totalKm>0): ?><td style="font-family:'DM Mono',monospace"><?=round($totalKm)?></td><?php endif; ?>
+        <?php if ($totalIndem>0): ?><td style="font-family:'DM Mono',monospace"><?=number_format($totalIndem,2,',',' ')?>€</td><?php endif; ?>
       </tr>
       </tfoot>
     </table>

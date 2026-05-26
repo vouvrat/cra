@@ -70,22 +70,26 @@ class CraController extends Controller {
                        - $s['p'] - $s['t'] - $s['r'] - $s['c'] - $s['f'] - $s['s'];
             $stats[$m] = $s;
         }
-        $yearStats = Cra::statsYear($userId, $year);
-        $config    = Cra::getConfig($userId);
-        $accessible = $me['role'] === 'admin' ? User::all() : User::accessibleBy($me['id']);
+        $yearStats      = Cra::statsYear($userId, $year);
+        $config         = Cra::getConfig($userId);         // config actuelle (pour le formulaire)
+        $configByMonth  = Cra::getConfigByMonth($userId, $year); // config historique par mois
+        $configPeriods  = Cra::getConfigPeriods($userId);  // toutes les périodes
+        $accessible     = $me['role'] === 'admin' ? User::all() : User::accessibleBy($me['id']);
 
         $this->view('shared.layout', [
-            'me'        => $me,
-            'target'    => $target,
-            'readonly'  => $readonly,
-            'year'      => $year,
-            'stats'     => $stats,
-            'yearStats' => $yearStats,
-            'config'    => $config,
-            'feries'    => $feries,
-            'accessible'=> $accessible,
-            'view'      => 'year',
-            'flash'     => $this->getFlash(),
+            'me'            => $me,
+            'target'        => $target,
+            'readonly'      => $readonly,
+            'year'          => $year,
+            'stats'         => $stats,
+            'yearStats'     => $yearStats,
+            'config'        => $config,
+            'configByMonth' => $configByMonth,
+            'configPeriods' => $configPeriods,
+            'feries'        => $feries,
+            'accessible'    => $accessible,
+            'view'          => 'year',
+            'flash'         => $this->getFlash(),
         ]);
     }
 
@@ -95,7 +99,8 @@ class CraController extends Controller {
         $days   = Cra::getDays($userId, $year);
         $notes  = Cra::getNotes($userId, $year);
         $stats  = Cra::statsMonth($userId, $year, $month);
-        $config = Cra::getConfig($userId);
+        // Config pour ce mois précis (milieu du mois)
+        $config = Cra::getConfigForDate($userId, sprintf('%04d-%02d-15', $year, $month));
         $accessible = $me['role'] === 'admin' ? User::all() : User::accessibleBy($me['id']);
 
         $this->view('shared.layout', [
@@ -174,6 +179,69 @@ class CraController extends Controller {
         $this->json(['ok' => true]);
     }
 
+    public function saveConfigPeriod(): void {
+        $me    = $this->requireAuth();
+        $this->verifyCsrf();
+
+        // Support membres virtuels gérés par responsable
+        $targetId = $this->post('target_id') ? (int)$this->post('target_id') : $me['id'];
+        if ($targetId !== $me['id']) {
+            if ($me['role'] !== 'admin' && !\Models\Team::isManagerOf($me['id'], $targetId)) {
+                $this->redirect('cra');
+            }
+        }
+
+        $km        = max(0, (float)$this->post('km', 0));
+        $duree     = max(0, (float)$this->post('duree', 0));
+        $indem     = max(0, (float)$this->post('indem', 0));
+        $validFrom = $this->post('valid_from');
+        $label     = trim($this->post('label', '')) ?: 'Configuration du '.$validFrom;
+
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $validFrom)) {
+            $this->flash('error', 'Date invalide.');
+            $this->redirect('cra');
+        }
+
+        $periodId = (int)$this->post('period_id', 0);
+        if ($periodId > 0) {
+            Cra::updateConfigPeriod($periodId, $targetId, $km, $duree, $indem, $validFrom, $label);
+            $this->flash('success', 'Configuration mise à jour.');
+        } else {
+            Cra::addConfigPeriod($targetId, $km, $duree, $indem, $validFrom, $label);
+            $this->flash('success', 'Nouvelle période de configuration ajoutée.');
+        }
+
+        $year = $this->post('year', date('Y'));
+        if ($targetId !== $me['id']) {
+            $this->redirect("teams/member/$targetId/year/$year");
+        } else {
+            $this->redirect("cra/year/$year");
+        }
+    }
+
+    public function deleteConfigPeriod(): void {
+        $me = $this->requireAuth();
+        $this->verifyCsrf();
+
+        $targetId = $this->post('target_id') ? (int)$this->post('target_id') : $me['id'];
+        if ($targetId !== $me['id']) {
+            if ($me['role'] !== 'admin' && !\Models\Team::isManagerOf($me['id'], $targetId)) {
+                $this->redirect('cra');
+            }
+        }
+
+        $periodId = (int)$this->post('period_id');
+        Cra::deleteConfigPeriod($periodId, $targetId);
+        $this->flash('success', 'Période supprimée.');
+
+        $year = $this->post('year', date('Y'));
+        if ($targetId !== $me['id']) {
+            $this->redirect("teams/member/$targetId/year/$year");
+        } else {
+            $this->redirect("cra/year/$year");
+        }
+    }
+
     public function export(string $year): void {
         $me   = $this->requireAuth();
         $this->doExport($me['id'], (int)$year);
@@ -187,14 +255,14 @@ class CraController extends Controller {
     }
 
     private function doExport(int $userId, int $year): void {
-        $user   = User::find($userId);
-        $days   = Cra::getDays($userId, $year);
-        $notes  = Cra::getNotes($userId, $year);
-        $config = Cra::getConfig($userId);
-        $feries = Cra::feries($year);
+        $user          = User::find($userId);
+        $days          = Cra::getDays($userId, $year);
+        $notes         = Cra::getNotes($userId, $year);
+        $configByMonth = Cra::getConfigByMonth($userId, $year);
+        $feries        = Cra::feries($year);
 
-        // CSV
-        $csv  = "Date,Jour,Type,Note\n";
+        // CSV avec km/temps/indem par mois selon config historique
+        $csv  = "Date,Jour,Type,Note,Km A/R,Temps trajet (min),Indemnite (EUR)\n";
         $months = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
         $dayNames = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
         $labels = ['p'=>'Présentiel','t'=>'Télétravail','r'=>'RTT','c'=>'Congé payé','f'=>'Férié','s'=>'Sans solde'];
@@ -209,7 +277,12 @@ class CraController extends Controller {
                 $type  = $days[$date] ?? ($isFer ? 'f' : ($isWe ? 'we' : ''));
                 $label = $labels[$type] ?? ($type === 'we' ? 'Week-end' : 'Non saisi');
                 $note  = '"' . str_replace('"','""', $notes[$date] ?? '') . '"';
-                $csv  .= "$date,{$dayNames[$dow]},$label,$note\n";
+                $cfg   = $configByMonth[$m];
+                $isP   = ($type === 'p');
+                $kmVal = $isP ? $cfg['km']    : 0;
+                $durVal= $isP ? $cfg['duree'] : 0;
+                $indVal= $isP ? $cfg['indem'] : 0;
+                $csv  .= "$date,{$dayNames[$dow]},$label,$note,$kmVal,$durVal,$indVal\n";
             }
         }
 

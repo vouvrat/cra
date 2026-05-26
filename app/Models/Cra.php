@@ -43,14 +43,124 @@ class Cra {
         }
     }
 
-    // ── CONFIG ───────────────────────────────────────────────────────────────
+    // ── CONFIG (ancienne API — retourne config active aujourd'hui) ───────────
     public static function getConfig(int $userId): array {
-        $rows = DB::fetchAll("SELECT key,value FROM user_config WHERE user_id=?", [$userId]);
-        $cfg  = ['km'=>'40','duree'=>'60','indem'=>'0'];
-        foreach ($rows as $r) $cfg[$r['key']] = $r['value'];
-        return $cfg;
+        return self::getConfigForDate($userId, date('Y-m-d'));
     }
 
+    /** Retourne la config active pour une date donnée (YYYY-MM-DD) */
+    public static function getConfigForDate(int $userId, string $date): array {
+        $row = DB::fetchOne(
+            "SELECT km, duree, indem FROM config_periods
+             WHERE user_id = ?
+               AND valid_from <= ?
+               AND (valid_to IS NULL OR valid_to >= ?)
+             ORDER BY valid_from DESC
+             LIMIT 1",
+            [$userId, $date, $date]
+        );
+        // Fallback sur l'ancienne table si aucune période trouvée
+        if (!$row) {
+            $rows = DB::fetchAll("SELECT key,value FROM user_config WHERE user_id=?", [$userId]);
+            $cfg  = ['km'=>40,'duree'=>60,'indem'=>0];
+            foreach ($rows as $r) $cfg[$r['key']] = (float)$r['value'];
+            return $cfg;
+        }
+        return [
+            'km'    => (float)$row['km'],
+            'duree' => (float)$row['duree'],
+            'indem' => (float)$row['indem'],
+        ];
+    }
+
+    /** Retourne un tableau [mois => config] pour une année entière */
+    public static function getConfigByMonth(int $userId, int $year): array {
+        $result = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $date = sprintf('%04d-%02d-15', $year, $m); // milieu du mois
+            $result[$m] = self::getConfigForDate($userId, $date);
+        }
+        return $result;
+    }
+
+    /** Toutes les périodes de config d'un utilisateur */
+    public static function getConfigPeriods(int $userId): array {
+        return DB::fetchAll(
+            "SELECT * FROM config_periods WHERE user_id=? ORDER BY valid_from DESC",
+            [$userId]
+        );
+    }
+
+    /** Ajoute une nouvelle période de config et ferme la précédente */
+    public static function addConfigPeriod(
+        int $userId, float $km, float $duree, float $indem,
+        string $validFrom, string $label
+    ): void {
+        // Fermer la période précédente qui débordait sur cette date
+        DB::query(
+            "UPDATE config_periods
+             SET valid_to = DATE(?, '-1 day')
+             WHERE user_id = ?
+               AND valid_from < ?
+               AND (valid_to IS NULL OR valid_to >= ?)",
+            [$validFrom, $userId, $validFrom, $validFrom]
+        );
+        // Insérer la nouvelle période
+        DB::query(
+            "INSERT INTO config_periods (user_id,km,duree,indem,valid_from,valid_to,label) VALUES (?,?,?,?,?,NULL,?)",
+            [$userId, $km, $duree, $indem, $validFrom, $label]
+        );
+    }
+
+    public static function deleteConfigPeriod(int $id, int $userId): void {
+        // Vérifier que la période appartient bien à cet utilisateur
+        $period = DB::fetchOne("SELECT * FROM config_periods WHERE id=? AND user_id=?", [$id, $userId]);
+        if (!$period) return;
+
+        // Si c'est la seule période, on ne supprime pas
+        $count = DB::fetchOne("SELECT COUNT(*) as n FROM config_periods WHERE user_id=?", [$userId]);
+        if ((int)$count['n'] <= 1) return;
+
+        DB::query("DELETE FROM config_periods WHERE id=?", [$id]);
+
+        // Rouvrir la période précédente si nécessaire (remettre valid_to à NULL)
+        $prev = DB::fetchOne(
+            "SELECT id FROM config_periods WHERE user_id=? AND valid_from < ? ORDER BY valid_from DESC LIMIT 1",
+            [$userId, $period['valid_from']]
+        );
+        if ($prev) {
+            DB::query("UPDATE config_periods SET valid_to=NULL WHERE id=?", [$prev['id']]);
+        }
+    }
+
+    public static function updateConfigPeriod(int $id, int $userId, float $km, float $duree, float $indem, string $validFrom, string $label): void {
+        DB::query(
+            "UPDATE config_periods SET km=?,duree=?,indem=?,valid_from=?,label=? WHERE id=? AND user_id=?",
+            [$km, $duree, $indem, $validFrom, $label, $id, $userId]
+        );
+        // Recalculer les valid_to de toutes les périodes de cet utilisateur
+        self::recalcPeriodBounds($userId);
+    }
+
+    /** Recalcule les valid_to de toutes les périodes (ordre chronologique) */
+    private static function recalcPeriodBounds(int $userId): void {
+        $periods = DB::fetchAll(
+            "SELECT id, valid_from FROM config_periods WHERE user_id=? ORDER BY valid_from ASC",
+            [$userId]
+        );
+        for ($i = 0; $i < count($periods); $i++) {
+            if ($i < count($periods) - 1) {
+                $nextFrom = $periods[$i+1]['valid_from'];
+                $validTo  = date('Y-m-d', strtotime($nextFrom . ' -1 day'));
+                DB::query("UPDATE config_periods SET valid_to=? WHERE id=?", [$validTo, $periods[$i]['id']]);
+            } else {
+                // Dernière période = ouverte
+                DB::query("UPDATE config_periods SET valid_to=NULL WHERE id=?", [$periods[$i]['id']]);
+            }
+        }
+    }
+
+    /** Ancienne API conservée pour compatibilité */
     public static function setConfig(int $userId, string $key, string $value): void {
         DB::query(
             "INSERT OR REPLACE INTO user_config (user_id,key,value) VALUES (?,?,?)",

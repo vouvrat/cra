@@ -52,6 +52,8 @@ $router->get('cra/month/{year}/{month}', 'CraController@month');
 $router->post('cra/day',                 'CraController@saveDay');
 $router->post('cra/note',                'CraController@saveNote');
 $router->post('cra/config',              'CraController@saveConfig');
+$router->post('cra/config/period',       'CraController@saveConfigPeriod');
+$router->post('cra/config/period/delete','CraController@deleteConfigPeriod');
 $router->get('cra/export/{year}',        'CraController@export');
 
 // ── DÉLÉGATION ────────────────────────────────────────────────────────────────
