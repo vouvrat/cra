@@ -47,6 +47,8 @@ class DB {
                 user_id INTEGER NOT NULL,
                 date    TEXT    NOT NULL,
                 type    TEXT    NOT NULL,
+                type_am TEXT,
+                type_pm TEXT,
                 UNIQUE(user_id, date),
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             );
@@ -104,6 +106,9 @@ class DB {
         // Migrations incrémentales (colonnes ajoutées progressivement)
         foreach (['virtual INTEGER NOT NULL DEFAULT 0'] as $col) {
             try { self::$pdo->exec("ALTER TABLE users ADD COLUMN $col"); } catch (\Throwable) {}
+        }
+        foreach (['type_am TEXT', 'type_pm TEXT'] as $col) {
+            try { self::$pdo->exec("ALTER TABLE days ADD COLUMN $col"); } catch (\Throwable) {}
         }
         try { self::$pdo->exec("ALTER TABLE archives ADD COLUMN team_id INTEGER"); } catch (\Throwable) {}
 

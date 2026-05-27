@@ -4,23 +4,72 @@ use Core\DB;
 class Cra {
 
     // ── DAYS ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Retourne les jours sous la forme :
+     *   'YYYY-MM-DD' => ['type'=>'p', 'am'=>null, 'pm'=>null]
+     * type = journée complète, am/pm = demi-journées (null si non saisi)
+     */
     public static function getDays(int $userId, int $year): array {
         $rows = DB::fetchAll(
-            "SELECT date, type FROM days WHERE user_id=? AND date LIKE ?",
+            "SELECT date, type, type_am, type_pm FROM days WHERE user_id=? AND date LIKE ?",
             [$userId, "$year-%"]
         );
-        return array_column($rows, 'type', 'date');
+        $result = [];
+        foreach ($rows as $r) {
+            $result[$r['date']] = [
+                'type' => $r['type'],
+                'am'   => $r['type_am'],
+                'pm'   => $r['type_pm'],
+            ];
+        }
+        return $result;
     }
 
+    /** Saisie journée complète */
     public static function setDay(int $userId, string $date, ?string $type): void {
         if ($type) {
             DB::query(
-                "INSERT OR REPLACE INTO days (user_id,date,type) VALUES (?,?,?)",
+                "INSERT INTO days (user_id,date,type,type_am,type_pm) VALUES (?,?,?,NULL,NULL)
+                 ON CONFLICT(user_id,date) DO UPDATE SET type=excluded.type, type_am=NULL, type_pm=NULL",
                 [$userId, $date, $type]
             );
         } else {
             DB::query("DELETE FROM days WHERE user_id=? AND date=?", [$userId, $date]);
         }
+    }
+
+    /** Saisie demi-journée (am = matin, pm = après-midi) */
+    public static function setHalfDay(int $userId, string $date, string $half, ?string $type): void {
+        // Récupérer l'état actuel
+        $existing = DB::fetchOne(
+            "SELECT type, type_am, type_pm FROM days WHERE user_id=? AND date=?",
+            [$userId, $date]
+        );
+
+        $col    = $half === 'am' ? 'type_am' : 'type_pm';
+        $other  = $half === 'am' ? 'type_pm' : 'type_am';
+        $curOther = $existing[$other] ?? null;
+
+        if (!$type && !$curOther) {
+            // Plus rien sur cette journée → supprimer
+            DB::query("DELETE FROM days WHERE user_id=? AND date=?", [$userId, $date]);
+            return;
+        }
+
+        // Déterminer le type "pleine journée" à stocker (pour compatibilité)
+        // Si les deux demi-journées sont saisies, type = le plus représentatif (am)
+        $fullType = $type ?? $curOther ?? ($existing['type'] ?? 'p');
+
+        DB::query(
+            "INSERT INTO days (user_id,date,type,type_am,type_pm) VALUES (?,?,?,?,?)
+             ON CONFLICT(user_id,date) DO UPDATE SET
+               type=excluded.type,
+               $col=excluded.$col",
+            [$userId, $date, $fullType,
+             $half === 'am' ? $type : ($existing['type_am'] ?? null),
+             $half === 'pm' ? $type : ($existing['type_pm'] ?? null)]
+        );
     }
 
     // ── NOTES ────────────────────────────────────────────────────────────────
@@ -169,25 +218,40 @@ class Cra {
     }
 
     // ── STATS ────────────────────────────────────────────────────────────────
-    public static function statsYear(int $userId, int $year): array {
-        $rows = DB::fetchAll(
-            "SELECT type, COUNT(*) as n FROM days WHERE user_id=? AND date LIKE ? GROUP BY type",
-            [$userId, "$year-%"]
-        );
-        $s = ['p'=>0,'t'=>0,'r'=>0,'c'=>0,'f'=>0,'s'=>0];
-        foreach ($rows as $r) $s[$r['type']] = (int)$r['n'];
+    /** Calcule les stats en comptant les demi-journées comme 0.5 */
+    private static function calcStats(array $rows): array {
+        $s = ['p'=>0.0,'t'=>0.0,'r'=>0.0,'c'=>0.0,'f'=>0.0,'s'=>0.0];
+        foreach ($rows as $r) {
+            // Journée complète sans demi-journées
+            if (!$r['type_am'] && !$r['type_pm']) {
+                if (isset($s[$r['type']])) $s[$r['type']] += 1.0;
+            } else {
+                // Au moins une demi-journée saisie
+                if ($r['type_am'] && isset($s[$r['type_am']])) $s[$r['type_am']] += 0.5;
+                if ($r['type_pm'] && isset($s[$r['type_pm']])) $s[$r['type_pm']] += 0.5;
+                // Si seulement am ou pm → l'autre moitié = journée complète
+                if ($r['type_am'] && !$r['type_pm'] && isset($s[$r['type']])) $s[$r['type']] += 0.5;
+                if ($r['type_pm'] && !$r['type_am'] && isset($s[$r['type']])) $s[$r['type']] += 0.5;
+            }
+        }
         return $s;
     }
 
-    public static function statsMonth(int $userId, int $year, int $month): array {
-        $m   = str_pad($month, 2, '0', STR_PAD_LEFT);
+    public static function statsYear(int $userId, int $year): array {
         $rows = DB::fetchAll(
-            "SELECT type, COUNT(*) as n FROM days WHERE user_id=? AND date LIKE ? GROUP BY type",
+            "SELECT type, type_am, type_pm FROM days WHERE user_id=? AND date LIKE ?",
+            [$userId, "$year-%"]
+        );
+        return self::calcStats($rows);
+    }
+
+    public static function statsMonth(int $userId, int $year, int $month): array {
+        $m = str_pad($month, 2, '0', STR_PAD_LEFT);
+        $rows = DB::fetchAll(
+            "SELECT type, type_am, type_pm FROM days WHERE user_id=? AND date LIKE ?",
             [$userId, "$year-$m-%"]
         );
-        $s = ['p'=>0,'t'=>0,'r'=>0,'c'=>0,'f'=>0,'s'=>0];
-        foreach ($rows as $r) $s[$r['type']] = (int)$r['n'];
-        return $s;
+        return self::calcStats($rows);
     }
 
     // ── ARCHIVES ─────────────────────────────────────────────────────────────

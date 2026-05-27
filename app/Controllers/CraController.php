@@ -122,6 +122,7 @@ class CraController extends Controller {
 
     // ── ACTIONS (AJAX / POST) ────────────────────────────────────────────────
     private const VALID_TYPES = ['p','t','r','c','f','s'];
+    private const VALID_HALVES = ['am','pm'];
 
     public function saveDay(): void {
         $me       = $this->requireAuth();
@@ -142,6 +143,31 @@ class CraController extends Controller {
         } else {
             Cra::setDay($me['id'], $date, $type);
         }
+        $this->json(['ok' => true]);
+    }
+
+    public function saveHalfDay(): void {
+        $me       = $this->requireAuth();
+        $this->verifyCsrf();
+        $date     = $this->post('date');
+        $half     = $this->post('half'); // 'am' ou 'pm'
+        $rawType  = $this->post('type') ?: null;
+        $type     = ($rawType && in_array($rawType, self::VALID_TYPES, true)) ? $rawType : null;
+        $targetId = $this->post('target_id') ? (int)$this->post('target_id') : null;
+
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date))
+            $this->json(['error'=>'date invalide'], 400);
+        if (!in_array($half, self::VALID_HALVES, true))
+            $this->json(['error'=>'half invalide'], 400);
+
+        $userId = $me['id'];
+        if ($targetId && $targetId !== $me['id']) {
+            if ($me['role'] !== 'admin' && !\Models\Team::isManagerOf($me['id'], $targetId))
+                $this->json(['error'=>'Accès refusé'], 403);
+            $userId = $targetId;
+        }
+
+        Cra::setHalfDay($userId, $date, $half, $type);
         $this->json(['ok' => true]);
     }
 

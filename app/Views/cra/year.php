@@ -1,4 +1,5 @@
 <?php
+function fmtStat($v) { return $v == floor($v) ? (int)$v : number_format($v,1,',',''); }
 $ys     = $yearStats;
 $worked = $ys['p'] + $ys['t'];
 $pct    = $worked ? round($ys['p'] / $worked * 100) : 0;
@@ -47,12 +48,12 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
 
   <!-- STATS -->
   <div class="stats-grid">
-    <div class="stat-card cp"><div class="stat-lbl">PRÉSENTIEL</div><div class="stat-val"><?=$ys['p']?></div><div class="stat-sub">jours</div></div>
-    <div class="stat-card ct"><div class="stat-lbl">TÉLÉTRAVAIL</div><div class="stat-val"><?=$ys['t']?></div></div>
-    <div class="stat-card cr"><div class="stat-lbl">RTT</div><div class="stat-val"><?=$ys['r']?></div></div>
-    <div class="stat-card cc"><div class="stat-lbl">CONGÉS PAYÉS</div><div class="stat-val"><?=$ys['c']?></div></div>
-    <div class="stat-card cs"><div class="stat-lbl">SANS SOLDE</div><div class="stat-val"><?=$ys['s']?></div></div>
-    <div class="stat-card cf"><div class="stat-lbl">JOURS FÉRIÉS</div><div class="stat-val"><?=$ys['f']?></div></div>
+    <div class="stat-card cp"><div class="stat-lbl">PRÉSENTIEL</div><div class="stat-val"><?=fmtStat(\$ys['p'])?></div><div class="stat-sub">jours</div></div>
+    <div class="stat-card ct"><div class="stat-lbl">TÉLÉTRAVAIL</div><div class="stat-val"><?=fmtStat(\$ys['t'])?></div></div>
+    <div class="stat-card cr"><div class="stat-lbl">RTT</div><div class="stat-val"><?=fmtStat(\$ys['r'])?></div></div>
+    <div class="stat-card cc"><div class="stat-lbl">CONGÉS PAYÉS</div><div class="stat-val"><?=fmtStat(\$ys['c'])?></div></div>
+    <div class="stat-card cs"><div class="stat-lbl">SANS SOLDE</div><div class="stat-val"><?=fmtStat(\$ys['s'])?></div></div>
+    <div class="stat-card cf"><div class="stat-lbl">JOURS FÉRIÉS</div><div class="stat-val"><?=fmtStat(\$ys['f'])?></div></div>
     <div class="stat-card cw"><div class="stat-lbl">TRAVAILLÉ</div><div class="stat-val"><?=$worked?></div><div class="stat-sub"><?=$pct?>% présent.</div></div>
     <?php if ($totalKm>0): ?><div class="stat-card ckm"><div class="stat-lbl">KM TRAJET</div><div class="stat-val"><?=number_format($totalKm,0,',',' ')?></div><div class="stat-sub">km sur l'année</div></div><?php endif; ?>
     <?php if ($totalIndem>0): ?><div class="stat-card ckm"><div class="stat-lbl">INDEMNITÉS</div><div class="stat-val"><?=number_format($totalIndem,2,',',' ')?> €</div></div><?php endif; ?>
