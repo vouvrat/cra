@@ -182,11 +182,11 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
 .cal-day.half{
   padding:0 !important;
   overflow:hidden;
-  /* Remplacer align-items:center par stretch pour que les spans remplissent */
   align-items:stretch !important;
-  justify-content:stretch !important;
+  justify-content:flex-start !important;
   flex-direction:column !important;
   gap:0 !important;
+  /* la hauteur = même que largeur via le grid (géré par layout.css) */
 }
 .cal-day.half .half-am,
 .cal-day.half .half-pm{

@@ -131,6 +131,8 @@ a{color:inherit;text-decoration:none}
 .cal-day.ds{background:var(--sb);color:var(--s);border-color:rgba(168,85,247,.3)}
 .cal-day.has-note::after{content:'';position:absolute;bottom:2px;right:2px;width:4px;height:4px;border-radius:50%;background:var(--ac)}
 .note-indicator{width:4px;height:4px;border-radius:50%;background:var(--ac)}
+/* Override aspect-ratio pour les demi-journées */
+.cal-day.half{aspect-ratio:auto !important;min-height:0}
 
 /* MONTH LAYOUT */
 .month-layout{display:grid;grid-template-columns:1fr 260px;gap:16px}
