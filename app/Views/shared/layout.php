@@ -48,19 +48,20 @@ a{color:inherit;text-decoration:none}
 .sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--bd)}
 .sb-logo h1{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.5px}
 .sb-logo span{font-size:10px;color:var(--mu);font-family:'DM Mono',monospace;letter-spacing:.06em}
-.sb-user{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;gap:2px}
-.sb-user .name{font-weight:600;font-size:13px}
+.sb-user{padding:10px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.sb-user-info{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.sb-user .name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-user .role{font-size:10px;color:var(--mu);font-family:'DM Mono',monospace;letter-spacing:.04em}
 .sb-user .role.admin{color:var(--r)}
+.sb-logout{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;color:var(--mu);transition:all .12s;flex-shrink:0;font-size:15px;text-decoration:none}
+.sb-logout:hover{background:rgba(236,72,153,.12);color:var(--c)}
 .sb-nav{flex:1;padding:10px 0;overflow-y:auto}
 .sb-section{font-size:10px;color:var(--mu);font-family:'DM Mono',monospace;letter-spacing:.08em;padding:12px 18px 4px}
 .sb-link{display:flex;align-items:center;gap:8px;padding:8px 18px;font-size:13px;color:var(--tx);transition:all .12s;border-left:2px solid transparent}
 .sb-link:hover{background:var(--bg3);color:var(--tx)}
 .sb-link.active{background:rgba(108,99,255,.12);border-left-color:var(--ac);color:var(--ac);font-weight:600}
 .sb-link .ico{font-size:15px;width:18px;text-align:center;flex-shrink:0}
-.sb-footer{padding:14px 18px;border-top:1px solid var(--bd)}
-.sb-footer a{font-size:12px;color:var(--mu);display:flex;align-items:center;gap:6px}
-.sb-footer a:hover{color:var(--tx)}
+
 
 /* MAIN */
 .main{margin-left:220px;min-height:100vh;display:flex;flex-direction:column}
@@ -299,8 +300,11 @@ $isAdmin = ($me['role'] ?? '') === 'admin';
     <span>SUIVI D'ACTIVITÉ</span>
   </div>
   <div class="sb-user">
-    <span class="name"><?= htmlspecialchars($me['name']) ?></span>
-    <span class="role <?= $me['role'] ?>"><?= strtoupper($me['role']) ?></span>
+    <div class="sb-user-info">
+      <span class="name"><?= htmlspecialchars($me['name']) ?></span>
+      <span class="role <?= $me['role'] ?>"><?= strtoupper($me['role']) ?></span>
+    </div>
+    <a href="<?= BASE_URL ?>logout" class="sb-logout" title="Déconnexion">⎋</a>
   </div>
   <nav class="sb-nav">
     <div class="sb-section">MON CRA</div>
@@ -365,9 +369,7 @@ $isAdmin = ($me['role'] ?? '') === 'admin';
       <div class="toggle-thumb" id="themeThumb"></div>
     </div>
   </div>
-  <div class="sb-footer">
-    <a href="<?= BASE_URL ?>logout">⎋ Déconnexion</a>
-  </div>
+
 </div>
 
 <!-- MAIN -->
@@ -457,7 +459,7 @@ function closeSidebar(){
 }
 // Fermer la sidebar sur clic d'un lien (navigation mobile)
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.sb-link, .sb-footer a').forEach(el => {
+  document.querySelectorAll('.sb-link, .sb-logout').forEach(el => {
     el.addEventListener('click', () => {
       if (window.innerWidth <= 700) closeSidebar();
     });

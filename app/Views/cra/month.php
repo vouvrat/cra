@@ -177,18 +177,30 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
 </div>
 
 <style>
-/* Cellule demi-journée */
+/* ── CELLULE DEMI-JOURNÉE ─────────────────────────────────── */
+/* Override complet du cal-day pour le mode half */
 .cal-day.half{
-  padding:0;overflow:hidden;cursor:pointer;
-  display:flex;flex-direction:column;position:relative;
-  font-size:9px;font-family:'DM Mono',monospace;font-weight:600;
+  padding:0 !important;
+  overflow:hidden;
+  /* Remplacer align-items:center par stretch pour que les spans remplissent */
+  align-items:stretch !important;
+  justify-content:stretch !important;
+  flex-direction:column !important;
+  gap:0 !important;
 }
 .cal-day.half .half-am,
 .cal-day.half .half-pm{
-  display:flex;align-items:center;justify-content:center;
-  flex:1;width:100%;font-size:9px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex:1 1 50%;
+  width:100%;
+  font-size:9px;
+  font-family:'DM Mono',monospace;
+  font-weight:700;
+  line-height:1;
 }
-/* Couleurs des demi-journées */
+/* Couleurs */
 .half-am.dp,.half-pm.dp{background:var(--pb);color:var(--p)}
 .half-am.dt,.half-pm.dt{background:var(--tb);color:var(--t)}
 .half-am.dr,.half-pm.dr{background:var(--rb);color:var(--r)}
@@ -196,10 +208,10 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
 .half-am.ds,.half-pm.ds{background:var(--sb);color:var(--s)}
 .half-am.df,.half-pm.df{background:var(--fb);color:var(--f)}
 .half-am.dempty,.half-pm.dempty{background:var(--bg3);color:var(--mu);font-size:8px}
-/* Séparateur entre les deux moitiés */
-.cal-day.half .half-am{border-bottom:1px solid rgba(255,255,255,.1)}
+/* Séparateur */
+.cal-day.half .half-am{border-bottom:1px solid rgba(128,128,128,.2)}
 
-/* Menu contextuel items */
+/* ── MENU CONTEXTUEL ──────────────────────────────────────── */
 .half-menu-item{
   display:flex;align-items:center;gap:8px;
   padding:6px 10px;cursor:pointer;border-radius:5px;
