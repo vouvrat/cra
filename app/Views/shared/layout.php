@@ -44,7 +44,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-hei
 a{color:inherit;text-decoration:none}
 
 /* SIDEBAR */
-.sidebar{width:220px;min-height:100vh;background:var(--bg2);border-right:1px solid var(--bd);position:fixed;top:0;left:0;display:flex;flex-direction:column;z-index:100}
+.sidebar{width:220px;min-height:100vh;background:var(--bg2);border-right:1px solid var(--bd);position:fixed;top:0;left:0;display:flex;flex-direction:column;z-index:100;transform:none;transition:transform .25s cubic-bezier(.4,0,.2,1)}
 .sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--bd)}
 .sb-logo h1{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.5px}
 .sb-logo span{font-size:10px;color:var(--mu);font-family:'DM Mono',monospace;letter-spacing:.06em}
