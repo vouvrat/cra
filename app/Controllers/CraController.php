@@ -300,15 +300,23 @@ class CraController extends Controller {
                 $dow   = (int)date('w', strtotime($date));
                 $isWe  = in_array($dow, [0,6]);
                 $isFer = in_array($date, $feries) && !$isWe;
-                $type  = $days[$date] ?? ($isFer ? 'f' : ($isWe ? 'we' : ''));
-                $label = $labels[$type] ?? ($type === 'we' ? 'Week-end' : 'Non saisi');
-                $note  = '"' . str_replace('"','""', $notes[$date] ?? '') . '"';
-                $cfg   = $configByMonth[$m];
-                $isP   = ($type === 'p');
-                $kmVal = $isP ? $cfg['km']    : 0;
-                $durVal= $isP ? $cfg['duree'] : 0;
-                $indVal= $isP ? $cfg['indem'] : 0;
-                $csv  .= "$date,{$dayNames[$dow]},$label,$note,$kmVal,$durVal,$indVal\n";
+                $dayData = $days[$date] ?? null;
+                $typeAm  = $dayData['am']   ?? null;
+                $typePm  = $dayData['pm']   ?? null;
+                $type    = $dayData ? $dayData['type'] : ($isFer ? 'f' : ($isWe ? 'we' : null));
+
+                if ($typeAm || $typePm) {
+                    $label = ($labels[$typeAm ?? ''] ?? 'Non saisi').' AM / '.($labels[$typePm ?? ''] ?? 'Non saisi').' PM';
+                } else {
+                    $label = $labels[$type ?? ''] ?? ($type === 'we' ? 'Week-end' : 'Non saisi');
+                }
+                $note   = '"' . str_replace('"','""', $notes[$date] ?? '') . '"';
+                $cfg    = $configByMonth[$m];
+                $pDays  = (!$typeAm && !$typePm && $type === 'p') ? 1.0
+                        : (($typeAm === 'p' ? 0.5 : 0) + ($typePm === 'p' ? 0.5 : 0));
+                $kmVal  = $pDays * $cfg['km'];
+                $durVal = $pDays * $cfg['duree'];
+                $indVal = $pDays * $cfg['indem'];
             }
         }
 
