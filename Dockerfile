@@ -1,7 +1,7 @@
 FROM php:8.3-apache
 
-# Dépendances système
-RUN apt-get update && apt-get install -y \
+# Dépendances système (retry en cas d'échec réseau ponctuel)
+RUN apt-get update --fix-missing && apt-get install -y \
     libsqlite3-dev \
     libicu-dev \
     --no-install-recommends \
