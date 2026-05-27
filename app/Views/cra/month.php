@@ -99,6 +99,7 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
         ?>
         <div class="<?=$cls?>"
           data-date="<?=$date?>"
+          data-day="<?=$d?>"
           data-type="<?= $type ?? '' ?>"
           data-am="<?= $typeAm ?? '' ?>"
           data-pm="<?= $typePm ?? '' ?>"
@@ -109,8 +110,8 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
           <?php endif; ?>
           title="<?=$date?><?=!empty($notes[$date])?' — '.htmlspecialchars($notes[$date]):''?>"
         ><?php if ($isHalf): ?>
-          <span class="half-am d<?= $typeAm ?? $type ?>"></span>
-          <span class="half-pm d<?= $typePm ?? $type ?>"></span>
+          <span class="half-am d<?= $typeAm ?? 'empty' ?>"><?= $typeAm ? strtoupper($typeAm) : $d ?></span>
+          <span class="half-pm d<?= $typePm ?? 'empty' ?>"><?= $typePm ? strtoupper($typePm) : '' ?></span>
         <?php else: ?><?=$d?><?php endif; ?></div>
         <?php endfor; ?>
       </div>
@@ -194,7 +195,7 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
 .half-am.dc,.half-pm.dc{background:var(--cb);color:var(--c)}
 .half-am.ds,.half-pm.ds{background:var(--sb);color:var(--s)}
 .half-am.df,.half-pm.df{background:var(--fb);color:var(--f)}
-.half-am.d,.half-pm.d{background:var(--bg3);color:var(--mu)}
+.half-am.dempty,.half-pm.dempty{background:var(--bg3);color:var(--mu);font-size:8px}
 /* Séparateur entre les deux moitiés */
 .cal-day.half .half-am{border-bottom:1px solid rgba(255,255,255,.1)}
 
@@ -328,7 +329,8 @@ document.addEventListener('click', e => {
 
 // ── RENDU CELLULE ───────────────────────────────────────────────────────────
 function renderDayEl(el, type, am, pm){
-  const d = el.textContent.trim() || el.getAttribute('data-date').split('-')[2].replace(/^0/,'');
+  // Numéro du jour stocké dans data-day (fiable même si innerHTML change)
+  const d = el.dataset.day || el.getAttribute('data-date').split('-')[2].replace(/^0/,'');
 
   // Supprimer toutes les classes de type
   el.className = el.className.split(' ')
@@ -338,14 +340,18 @@ function renderDayEl(el, type, am, pm){
   el.innerHTML = '';
 
   if (am || pm) {
-    // Demi-journées
     el.classList.add('half');
+
     const spanAm = document.createElement('span');
-    spanAm.className = 'half-am d' + (am || type || '');
-    spanAm.textContent = am ? am.toUpperCase() : '·';
+    spanAm.className = 'half-am ' + (am ? 'd'+am : 'dempty');
+    // Matin : si saisi → initiale, sinon → numéro du jour (repère visuel)
+    spanAm.textContent = am ? am.toUpperCase() : d;
+
     const spanPm = document.createElement('span');
-    spanPm.className = 'half-pm d' + (pm || type || '');
-    spanPm.textContent = pm ? pm.toUpperCase() : '·';
+    spanPm.className = 'half-pm ' + (pm ? 'd'+pm : 'dempty');
+    // Après-midi : si saisi → initiale, sinon → vide
+    spanPm.textContent = pm ? pm.toUpperCase() : '';
+
     el.appendChild(spanAm);
     el.appendChild(spanPm);
   } else if (type) {
