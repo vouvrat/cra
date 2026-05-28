@@ -109,9 +109,17 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
             oncontextmenu="openHalfMenu(event,this)"
           <?php endif; ?>
           title="<?=$date?><?=!empty($notes[$date])?' — '.htmlspecialchars($notes[$date]):''?>"
-        ><?php if ($isHalf): ?>
-          <span class="half-am d<?= $typeAm ?? 'empty' ?>"><?= $typeAm ? strtoupper($typeAm) : $d ?></span>
-          <span class="half-pm d<?= $typePm ?? 'empty' ?>"><?= $typePm ? strtoupper($typePm) : '' ?></span>
+        ><?php if ($isHalf):
+          $amBg  = ['p'=>'#1e3a5f','t'=>'#14412a','r'=>'#422d0a','c'=>'#4a1030','s'=>'#3b1f6e','f'=>'#2a2a2a'];
+          $amFg  = ['p'=>'#3b82f6','t'=>'#22c55e','r'=>'#f59e0b','c'=>'#ec4899','s'=>'#a855f7','f'=>'#8b8b8b'];
+          $bgAm  = $typeAm ? ($amBg[$typeAm] ?? '#232328') : 'transparent';
+          $fgAm  = $typeAm ? ($amFg[$typeAm] ?? '#7f7f8f') : '#7f7f8f';
+          $bgPm  = $typePm ? ($amBg[$typePm] ?? '#232328') : 'transparent';
+          $fgPm  = $typePm ? ($amFg[$typePm] ?? '#7f7f8f') : '#7f7f8f';
+          $baseSpan = 'position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:monospace;font-weight:700;line-height:1;';
+        ?>
+          <span style="<?=$baseSpan?>top:0;bottom:50%;background:<?=$bgAm?>;color:<?=$fgAm?>;border-bottom:1px solid rgba(128,128,128,.2)"><?= $typeAm ? strtoupper($typeAm) : $d ?></span>
+          <span style="<?=$baseSpan?>top:50%;bottom:0;background:<?=$bgPm?>;color:<?=$fgPm?>"><?= $typePm ? strtoupper($typePm) : '' ?></span>
         <?php else: ?><?=$d?><?php endif; ?></div>
         <?php endfor; ?>
       </div>
@@ -335,29 +343,39 @@ document.addEventListener('click', e => {
   if (!document.getElementById('halfMenu').contains(e.target)) closeHalfMenu();
 });
 
+// ── COULEURS (inline styles — contourne tout problème CSS) ─────────────────
+const TYPE_BG = {p:'#1e3a5f',t:'#14412a',r:'#422d0a',c:'#4a1030',s:'#3b1f6e',f:'#2a2a2a'};
+const TYPE_FG = {p:'#3b82f6',t:'#22c55e',r:'#f59e0b',c:'#ec4899',s:'#a855f7',f:'#8b8b8b'};
+const SPAN_BASE = 'position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:monospace;font-weight:700;line-height:1;';
+
 // ── RENDU CELLULE ───────────────────────────────────────────────────────────
 function renderDayEl(el, type, am, pm){
-  // Numéro du jour stocké dans data-day (fiable même si innerHTML change)
   const d = el.dataset.day || el.getAttribute('data-date').split('-')[2].replace(/^0/,'');
 
-  // Supprimer toutes les classes de type
+  // Nettoyer classes
   el.className = el.className.split(' ')
     .filter(cls => !/^d[ptrcfs]$/.test(cls) && cls !== 'half')
     .join(' ');
-
   el.innerHTML = '';
 
   if (am || pm) {
     el.classList.add('half');
 
+    // MATIN — inline styles pour garantir l'affichage
     const spanAm = document.createElement('span');
-    spanAm.className = 'half-am ' + (am ? 'd'+am : 'dempty');
-    // Matin : si saisi → initiale, sinon → numéro du jour (repère visuel)
+    spanAm.style.cssText = SPAN_BASE +
+      'top:0;bottom:50%;' +
+      'background:' + (am ? TYPE_BG[am] : 'transparent') + ';' +
+      'color:' + (am ? TYPE_FG[am] : '#7f7f8f') + ';' +
+      'border-bottom:1px solid rgba(128,128,128,.2);';
     spanAm.textContent = am ? am.toUpperCase() : d;
 
+    // APRÈS-MIDI — inline styles
     const spanPm = document.createElement('span');
-    spanPm.className = 'half-pm ' + (pm ? 'd'+pm : 'dempty');
-    // Après-midi : si saisi → initiale, sinon → vide
+    spanPm.style.cssText = SPAN_BASE +
+      'top:50%;bottom:0;' +
+      'background:' + (pm ? TYPE_BG[pm] : 'transparent') + ';' +
+      'color:' + (pm ? TYPE_FG[pm] : '#7f7f8f') + ';';
     spanPm.textContent = pm ? pm.toUpperCase() : '';
 
     el.appendChild(spanAm);
