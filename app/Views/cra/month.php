@@ -104,9 +104,8 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
           data-am="<?= $typeAm ?? '' ?>"
           data-pm="<?= $typePm ?? '' ?>"
           <?php if (!$isWe && !$readonly): ?>
-            onclick="clickDay(this)"
-            ondblclick="openNote(this.dataset.date)"
-            oncontextmenu="openHalfMenu(event,this)"
+            onclick="clickDay(this, event)"
+            ondblclick="dblClickDay(this)"
           <?php endif; ?>
           title="<?=$date?><?=!empty($notes[$date])?' — '.htmlspecialchars($notes[$date]):''?>"
         ><?php if ($isHalf):
@@ -127,7 +126,7 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
           </svg><?php else: ?><?=$d?><?php endif; ?></div>
         <?php endfor; ?>
       </div>
-      <p class="hint">Clic = journée complète · Clic droit = demi-journée · Double-clic = note</p>
+      <p class="hint">Clic = journée complète · Double-clic = basculer en demi-journées · Sur demi : clic haut = matin, clic bas = après-midi</p>
     </div>
 
     <!-- RIGHT PANEL -->
@@ -155,24 +154,6 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
         <?php if (!$km && !$dur && !$indem): ?><div style="font-size:11px;color:var(--mu)">Configurer les paramètres sur la vue annuelle.</div><?php endif; ?>
       </div>
     </div>
-  </div>
-</div>
-
-<!-- MENU CONTEXTUEL DEMI-JOURNÉE -->
-<div id="halfMenu" style="
-  display:none;position:fixed;z-index:500;
-  background:var(--bg2);border:1px solid var(--bd);
-  border-radius:var(--rad);padding:6px;
-  box-shadow:0 8px 24px rgba(0,0,0,.35);min-width:180px">
-  <div style="font-size:10px;color:var(--mu);font-family:'DM Mono',monospace;padding:4px 8px 6px;letter-spacing:.06em" id="halfMenuDate"></div>
-  <div id="halfMenuAm" style="padding:2px 0">
-    <div style="font-size:10px;color:var(--mu);font-family:'DM Mono',monospace;padding:2px 8px">MATIN</div>
-    <div id="halfMenuAmBtns"></div>
-  </div>
-  <div style="height:1px;background:var(--bd);margin:4px 0"></div>
-  <div id="halfMenuPm" style="padding:2px 0">
-    <div style="font-size:10px;color:var(--mu);font-family:'DM Mono',monospace;padding:2px 8px">APRÈS-MIDI</div>
-    <div id="halfMenuPmBtns"></div>
   </div>
 </div>
 
@@ -219,29 +200,12 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
 .half-am.df,.half-pm.df{background:var(--fb);color:var(--f)}
 .half-am.dempty,.half-pm.dempty{background:transparent;color:var(--mu);font-size:8px}
 
-/* ── MENU CONTEXTUEL ──────────────────────────────────────── */
-.half-menu-item{
-  display:flex;align-items:center;gap:8px;
-  padding:6px 10px;cursor:pointer;border-radius:5px;
-  font-size:12px;font-weight:500;transition:background .1s;
-}
-.half-menu-item:hover{background:var(--bg3)}
-.half-menu-item.active{font-weight:700}
-.half-menu-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.half-menu-item .erase{font-size:13px}
+
 </style>
 
 <script>
 let mode = 'p';
 const notes = <?= json_encode($notes) ?>;
-const TYPES = {
-  p:{label:'Présentiel',color:'var(--p)'},
-  t:{label:'Télétravail',color:'var(--t)'},
-  r:{label:'RTT',color:'var(--r)'},
-  c:{label:'Congé payé',color:'var(--c)'},
-  s:{label:'Sans solde',color:'var(--s)'},
-  f:{label:'Férié',color:'var(--f)'},
-};
 
 function setMode(m){
   mode = m;
@@ -252,100 +216,73 @@ function setMode(m){
 }
 setMode('p');
 
-// ── JOURNÉE COMPLÈTE ────────────────────────────────────────────────────────
-function clickDay(el){
+// ── CLIC SUR UNE CELLULE ─────────────────────────────────────────────────────
+// Comportement :
+//  • Cellule vide ou type complet → applique le type en journée complète
+//  • Clic sur moitié AM d'une cellule half → change AM
+//  • Clic sur moitié PM d'une cellule half → change PM
+//  • mode 'none' → efface (remet en vide)
+function clickDay(el, event){
   const date    = el.dataset.date;
-  const current = el.dataset.type || null;
-  const newType = (mode === 'none' || (current === mode && !el.dataset.am && !el.dataset.pm)) ? null : mode;
+  const isHalf  = el.classList.contains('half');
 
-  // Reset demi-journées
-  el.dataset.am = '';
-  el.dataset.pm = '';
-  el.dataset.type = newType || '';
+  if (isHalf) {
+    // Déterminer si le clic est sur la moitié haute ou basse
+    const rect  = el.getBoundingClientRect();
+    const relY  = event.clientY - rect.top;
+    const half  = relY < rect.height / 2 ? 'am' : 'pm';
 
-  // Reconstruire le rendu
-  renderDayEl(el, newType, null, null);
-  saveDay(date, newType);
+    const newType = mode === 'none' ? null : mode;
+    if (half === 'am') el.dataset.am = newType || '';
+    else               el.dataset.pm = newType || '';
+
+    const am = el.dataset.am || null;
+    const pm = el.dataset.pm || null;
+
+    // Si tout est effacé → journée vide
+    if (!am && !pm) {
+      el.dataset.type = '';
+      el.classList.remove('half');
+      renderDayEl(el, null, null, null);
+      saveDay(date, null);
+      return;
+    }
+
+    const fullType = am || pm || el.dataset.type || null;
+    el.dataset.type = fullType || '';
+    renderDayEl(el, fullType, am, pm);
+    saveHalfDay(date, half, newType);
+
+  } else {
+    // Journée complète
+    const current = el.dataset.type || null;
+    const newType = (mode === 'none' || current === mode) ? null : mode;
+    el.dataset.am = '';
+    el.dataset.pm = '';
+    el.dataset.type = newType || '';
+    renderDayEl(el, newType, null, null);
+    saveDay(date, newType);
+  }
 }
 
-// ── MENU CLIC DROIT ─────────────────────────────────────────────────────────
-let activeHalfEl = null;
-
-function openHalfMenu(e, el){
-  e.preventDefault();
-  activeHalfEl = el;
-  const date = el.dataset.date;
-  const curAm = el.dataset.am || null;
-  const curPm = el.dataset.pm || null;
-
-  document.getElementById('halfMenuDate').textContent = date;
-  buildHalfBtns('halfMenuAmBtns', 'am', curAm);
-  buildHalfBtns('halfMenuPmBtns', 'pm', curPm);
-
-  const menu = document.getElementById('halfMenu');
-  menu.style.display = 'block';
-
-  // Positionnement
-  const vw = window.innerWidth, vh = window.innerHeight;
-  let x = e.clientX, y = e.clientY;
-  menu.style.left = '0px'; menu.style.top = '0px';
-  const mw = menu.offsetWidth, mh = menu.offsetHeight;
-  if (x + mw > vw - 8) x = vw - mw - 8;
-  if (y + mh > vh - 8) y = vh - mh - 8;
-  menu.style.left = x + 'px';
-  menu.style.top  = y + 'px';
+// ── DOUBLE-CLIC : bascule journée complète ↔ demi-journées ─────────────────
+// Sur journée complète → divise : AM = type actuel, PM = vide
+// Sur demi-journée → ouvre la note
+function dblClickDay(el){
+  const isHalf = el.classList.contains('half');
+  if (!isHalf && el.dataset.type) {
+    // Bascule en mode demi-journée
+    const t = el.dataset.type;
+    el.dataset.am = t;
+    el.dataset.pm = '';
+    renderDayEl(el, t, t, null);
+    saveHalfDay(el.dataset.date, 'am', t);
+    // Supprimer la journée complète pour ne garder que am
+    saveDay(el.dataset.date, null);
+  } else {
+    openNote(el.dataset.date);
+  }
 }
-
-function buildHalfBtns(containerId, half, current){
-  const div = document.getElementById(containerId);
-  div.innerHTML = '';
-
-  // Bouton effacer
-  const erase = document.createElement('div');
-  erase.className = 'half-menu-item' + (!current ? ' active' : '');
-  erase.innerHTML = '<span class="erase">⌫</span> Effacer';
-  erase.onclick = () => selectHalf(half, null);
-  div.appendChild(erase);
-
-  Object.entries(TYPES).forEach(([k,v]) => {
-    const item = document.createElement('div');
-    item.className = 'half-menu-item' + (current === k ? ' active' : '');
-    item.innerHTML = `<span class="dot" style="background:${v.color}"></span>${v.label}`;
-    item.onclick = () => selectHalf(half, k);
-    div.appendChild(item);
-  });
-}
-
-function selectHalf(half, type){
-  closeHalfMenu();
-  if (!activeHalfEl) return;
-
-  const el   = activeHalfEl;
-  const date = el.dataset.date;
-
-  if (half === 'am') el.dataset.am = type || '';
-  else               el.dataset.pm = type || '';
-
-  const am = el.dataset.am || null;
-  const pm = el.dataset.pm || null;
-
-  // Type pleine journée = am en priorité, sinon pm, sinon type existant
-  const fullType = am || pm || el.dataset.type || null;
-  el.dataset.type = fullType || '';
-
-  renderDayEl(el, fullType, am, pm);
-  saveHalfDay(date, half, type);
-}
-
-function closeHalfMenu(){
-  document.getElementById('halfMenu').style.display = 'none';
-  activeHalfEl = null;
-}
-
-// Fermer le menu sur clic ailleurs
-document.addEventListener('click', e => {
-  if (!document.getElementById('halfMenu').contains(e.target)) closeHalfMenu();
-});
 
 // ── COULEURS ────────────────────────────────────────────────────────────────
 const TYPE_BG = {p:'#1e3a5f',t:'#14412a',r:'#422d0a',c:'#4a1030',s:'#3b1f6e',f:'#2a2a2a'};
@@ -449,7 +386,7 @@ function submitNote(){
 
 document.addEventListener('keydown', e => {
   if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
-  if (e.key === 'Escape'){ closeNote(); closeHalfMenu(); return; }
+  if (e.key === 'Escape'){ closeNote(); return; }
   const map = {p:'p',t:'t',r:'r',c:'c',s:'s',f:'f','0':'none'};
   if (map[e.key.toLowerCase()]) setMode(map[e.key.toLowerCase()]);
 });
