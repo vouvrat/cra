@@ -50,6 +50,7 @@ $router->get('cra',                      'CraController@year');
 $router->get('cra/year/{year}',          'CraController@year');
 $router->get('cra/month/{year}/{month}', 'CraController@month');
 $router->post('cra/day',                 'CraController@saveDay');
+$router->post('cra/halfday',              'CraController@saveHalfDay');
 $router->post('cra/note',                'CraController@saveNote');
 $router->post('cra/config',              'CraController@saveConfig');
 $router->post('cra/config/period',       'CraController@saveConfigPeriod');
