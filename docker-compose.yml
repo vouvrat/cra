@@ -4,17 +4,21 @@ services:
     container_name: cra-app
     restart: unless-stopped
     ports:
-      - "8080:80"          # Changer 8080 par le port souhaité
+      - "8080:80"
     volumes:
-      - cra_data:/var/www/html/data   # Persistance BDD + archives
+      - cra_data:/var/www/html/data
     environment:
       - APACHE_RUN_USER=www-data
       - APACHE_RUN_GROUP=www-data
+      # Fix NAS Synology — générateur aléatoire
+      - APACHE_RNG_DEFAULT=file:/dev/urandom
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    # Nécessaire sur Synology pour accès à /dev/urandom
+    security_opt:
+      - no-new-privileges:true
     labels:
-      # Optionnel : si tu utilises Traefik (Home Assistant / Nginx Proxy Manager)
       - "traefik.enable=false"
 
 volumes:
