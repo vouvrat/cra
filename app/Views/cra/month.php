@@ -178,28 +178,26 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
 
 <style>
 /* ── CELLULE DEMI-JOURNÉE ─────────────────────────────────── */
-/* Override complet du cal-day pour le mode half */
+/* Approche positionnement absolu — contourne aspect-ratio */
 .cal-day.half{
   padding:0 !important;
   overflow:hidden;
-  align-items:stretch !important;
-  justify-content:flex-start !important;
-  flex-direction:column !important;
-  gap:0 !important;
-  /* la hauteur = même que largeur via le grid (géré par layout.css) */
+  position:relative;
 }
 .cal-day.half .half-am,
 .cal-day.half .half-pm{
+  position:absolute;
+  left:0;right:0;
   display:flex;
   align-items:center;
   justify-content:center;
-  flex:1 1 50%;
-  width:100%;
   font-size:9px;
   font-family:'DM Mono',monospace;
   font-weight:700;
   line-height:1;
 }
+.cal-day.half .half-am{top:0;bottom:50%;border-bottom:1px solid rgba(128,128,128,.2)}
+.cal-day.half .half-pm{top:50%;bottom:0}
 /* Couleurs */
 .half-am.dp,.half-pm.dp{background:var(--pb);color:var(--p)}
 .half-am.dt,.half-pm.dt{background:var(--tb);color:var(--t)}
@@ -207,9 +205,7 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
 .half-am.dc,.half-pm.dc{background:var(--cb);color:var(--c)}
 .half-am.ds,.half-pm.ds{background:var(--sb);color:var(--s)}
 .half-am.df,.half-pm.df{background:var(--fb);color:var(--f)}
-.half-am.dempty,.half-pm.dempty{background:var(--bg3);color:var(--mu);font-size:8px}
-/* Séparateur */
-.cal-day.half .half-am{border-bottom:1px solid rgba(128,128,128,.2)}
+.half-am.dempty,.half-pm.dempty{background:transparent;color:var(--mu);font-size:8px}
 
 /* ── MENU CONTEXTUEL ──────────────────────────────────────── */
 .half-menu-item{

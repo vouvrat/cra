@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CRA <?= $year ?? date('Y') ?> — <?= APP_NAME ?></title>
+<meta name="theme-color" content="#6c63ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CRA">
+<link rel="manifest" href="<?= BASE_URL ?>manifest.json">
+<link rel="apple-touch-icon" href="<?= BASE_URL ?>icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="<?= BASE_URL ?>icons/favicon-32.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ── THEME DARK (défaut) ─────────────────────────── */
@@ -131,8 +138,6 @@ a{color:inherit;text-decoration:none}
 .cal-day.ds{background:var(--sb);color:var(--s);border-color:rgba(168,85,247,.3)}
 .cal-day.has-note::after{content:'';position:absolute;bottom:2px;right:2px;width:4px;height:4px;border-radius:50%;background:var(--ac)}
 .note-indicator{width:4px;height:4px;border-radius:50%;background:var(--ac)}
-/* Override aspect-ratio pour les demi-journées */
-.cal-day.half{aspect-ratio:auto !important;min-height:0}
 
 /* MONTH LAYOUT */
 .month-layout{display:grid;grid-template-columns:1fr 260px;gap:16px}
