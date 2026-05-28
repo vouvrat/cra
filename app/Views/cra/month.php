@@ -110,17 +110,21 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
           <?php endif; ?>
           title="<?=$date?><?=!empty($notes[$date])?' — '.htmlspecialchars($notes[$date]):''?>"
         ><?php if ($isHalf):
-          $amBg  = ['p'=>'#1e3a5f','t'=>'#14412a','r'=>'#422d0a','c'=>'#4a1030','s'=>'#3b1f6e','f'=>'#2a2a2a'];
-          $amFg  = ['p'=>'#3b82f6','t'=>'#22c55e','r'=>'#f59e0b','c'=>'#ec4899','s'=>'#a855f7','f'=>'#8b8b8b'];
-          $bgAm  = $typeAm ? ($amBg[$typeAm] ?? '#232328') : 'transparent';
-          $fgAm  = $typeAm ? ($amFg[$typeAm] ?? '#7f7f8f') : '#7f7f8f';
-          $bgPm  = $typePm ? ($amBg[$typePm] ?? '#232328') : 'transparent';
-          $fgPm  = $typePm ? ($amFg[$typePm] ?? '#7f7f8f') : '#7f7f8f';
-          $baseSpan = 'position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:monospace;font-weight:700;line-height:1;';
-        ?>
-          <span style="<?=$baseSpan?>top:0;bottom:50%;background:<?=$bgAm?>;color:<?=$fgAm?>;border-bottom:1px solid rgba(128,128,128,.2)"><?= $typeAm ? strtoupper($typeAm) : $d ?></span>
-          <span style="<?=$baseSpan?>top:50%;bottom:0;background:<?=$bgPm?>;color:<?=$fgPm?>"><?= $typePm ? strtoupper($typePm) : '' ?></span>
-        <?php else: ?><?=$d?><?php endif; ?></div>
+          $BG = ['p'=>'#1e3a5f','t'=>'#14412a','r'=>'#422d0a','c'=>'#4a1030','s'=>'#3b1f6e','f'=>'#2a2a2a'];
+          $FG = ['p'=>'#3b82f6','t'=>'#22c55e','r'=>'#f59e0b','c'=>'#ec4899','s'=>'#a855f7','f'=>'#8b8b8b'];
+          $bgAm = $typeAm ? ($BG[$typeAm]??'#232328') : '#232328';
+          $fgAm = $typeAm ? ($FG[$typeAm]??'#7f7f8f') : '#7f7f8f';
+          $bgPm = $typePm ? ($BG[$typePm]??'#232328') : '#232328';
+          $fgPm = $typePm ? ($FG[$typePm]??'#7f7f8f') : '#7f7f8f';
+          $lblAm = $typeAm ? strtoupper($typeAm) : $d;
+          $lblPm = $typePm ? strtoupper($typePm) : '';
+        ?><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 40 40" style="display:block;border-radius:inherit">
+            <rect x="0" y="0"  width="40" height="20" fill="<?=$bgAm?>"/>
+            <rect x="0" y="20" width="40" height="20" fill="<?=$bgPm?>"/>
+            <line x1="0" y1="20" x2="40" y2="20" stroke="rgba(128,128,128,.3)" stroke-width="0.5"/>
+            <text x="20" y="14" text-anchor="middle" dominant-baseline="middle" fill="<?=$fgAm?>" font-size="13" font-family="monospace" font-weight="bold"><?=$lblAm?></text>
+            <text x="20" y="30" text-anchor="middle" dominant-baseline="middle" fill="<?=$fgPm?>" font-size="13" font-family="monospace" font-weight="bold"><?=$lblPm?></text>
+          </svg><?php else: ?><?=$d?><?php endif; ?></div>
         <?php endfor; ?>
       </div>
       <p class="hint">Clic = journée complète · Clic droit = demi-journée · Double-clic = note</p>
@@ -343,16 +347,14 @@ document.addEventListener('click', e => {
   if (!document.getElementById('halfMenu').contains(e.target)) closeHalfMenu();
 });
 
-// ── COULEURS (inline styles — contourne tout problème CSS) ─────────────────
+// ── COULEURS ────────────────────────────────────────────────────────────────
 const TYPE_BG = {p:'#1e3a5f',t:'#14412a',r:'#422d0a',c:'#4a1030',s:'#3b1f6e',f:'#2a2a2a'};
 const TYPE_FG = {p:'#3b82f6',t:'#22c55e',r:'#f59e0b',c:'#ec4899',s:'#a855f7',f:'#8b8b8b'};
-const SPAN_BASE = 'position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:monospace;font-weight:700;line-height:1;';
 
-// ── RENDU CELLULE ───────────────────────────────────────────────────────────
+// ── RENDU CELLULE (SVG inline — zéro dépendance CSS) ────────────────────────
 function renderDayEl(el, type, am, pm){
   const d = el.dataset.day || el.getAttribute('data-date').split('-')[2].replace(/^0/,'');
 
-  // Nettoyer classes
   el.className = el.className.split(' ')
     .filter(cls => !/^d[ptrcfs]$/.test(cls) && cls !== 'half')
     .join(' ');
@@ -360,26 +362,55 @@ function renderDayEl(el, type, am, pm){
 
   if (am || pm) {
     el.classList.add('half');
+    const bgAm  = am ? TYPE_BG[am] : '#232328';
+    const fgAm  = am ? TYPE_FG[am] : '#7f7f8f';
+    const bgPm  = pm ? TYPE_BG[pm] : '#232328';
+    const fgPm  = pm ? TYPE_FG[pm] : '#7f7f8f';
+    const lblAm = am ? am.toUpperCase() : d;
+    const lblPm = pm ? pm.toUpperCase() : '';
 
-    // MATIN — inline styles pour garantir l'affichage
-    const spanAm = document.createElement('span');
-    spanAm.style.cssText = SPAN_BASE +
-      'top:0;bottom:50%;' +
-      'background:' + (am ? TYPE_BG[am] : 'transparent') + ';' +
-      'color:' + (am ? TYPE_FG[am] : '#7f7f8f') + ';' +
-      'border-bottom:1px solid rgba(128,128,128,.2);';
-    spanAm.textContent = am ? am.toUpperCase() : d;
+    const ns  = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('width','100%');
+    svg.setAttribute('height','100%');
+    svg.setAttribute('viewBox','0 0 40 40');
+    svg.style.cssText = 'display:block;border-radius:inherit;';
 
-    // APRÈS-MIDI — inline styles
-    const spanPm = document.createElement('span');
-    spanPm.style.cssText = SPAN_BASE +
-      'top:50%;bottom:0;' +
-      'background:' + (pm ? TYPE_BG[pm] : 'transparent') + ';' +
-      'color:' + (pm ? TYPE_FG[pm] : '#7f7f8f') + ';';
-    spanPm.textContent = pm ? pm.toUpperCase() : '';
+    const mkRect = (y,h,fill) => {
+      const r = document.createElementNS(ns,'rect');
+      r.setAttribute('x','0'); r.setAttribute('y',y);
+      r.setAttribute('width','40'); r.setAttribute('height',h);
+      r.setAttribute('fill',fill);
+      return r;
+    };
+    const mkLine = () => {
+      const l = document.createElementNS(ns,'line');
+      l.setAttribute('x1','0'); l.setAttribute('y1','20');
+      l.setAttribute('x2','40'); l.setAttribute('y2','20');
+      l.setAttribute('stroke','rgba(128,128,128,.3)');
+      l.setAttribute('stroke-width','0.5');
+      return l;
+    };
+    const mkText = (label, y, fill) => {
+      const t = document.createElementNS(ns,'text');
+      t.setAttribute('x','20'); t.setAttribute('y', y);
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('dominant-baseline','middle');
+      t.setAttribute('fill', fill);
+      t.setAttribute('font-size','13');
+      t.setAttribute('font-family','monospace');
+      t.setAttribute('font-weight','bold');
+      t.textContent = label;
+      return t;
+    };
 
-    el.appendChild(spanAm);
-    el.appendChild(spanPm);
+    svg.appendChild(mkRect(0,  20, bgAm));
+    svg.appendChild(mkRect(20, 20, bgPm));
+    svg.appendChild(mkLine());
+    svg.appendChild(mkText(lblAm, 14, fgAm));
+    if (lblPm) svg.appendChild(mkText(lblPm, 30, fgPm));
+    el.appendChild(svg);
+
   } else if (type) {
     el.classList.add('d' + type);
     el.textContent = d;
