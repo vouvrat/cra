@@ -228,13 +228,19 @@ class Cra {
     }
 
     // ── STATS ────────────────────────────────────────────────────────────────
-    /** Calcule les stats en comptant les demi-journées comme 0.5 */
+    /**
+     * Calcule les stats en comptant les demi-journées comme 0.5 (jours d'assiduité).
+     * 'p_trajets' est distinct : il compte 1 trajet complet (aller-retour) dès
+     * qu'il y a du présentiel sur la journée, même en demi-journée — le trajet
+     * domicile-travail ne dépend pas de la durée de présence sur place.
+     */
     private static function calcStats(array $rows): array {
-        $s = ['p'=>0.0,'t'=>0.0,'r'=>0.0,'c'=>0.0,'f'=>0.0,'s'=>0.0];
+        $s = ['p'=>0.0,'t'=>0.0,'r'=>0.0,'c'=>0.0,'f'=>0.0,'s'=>0.0,'p_trajets'=>0.0];
         foreach ($rows as $r) {
             // Journée complète sans demi-journées
             if (!$r['type_am'] && !$r['type_pm']) {
                 if (isset($s[$r['type']])) $s[$r['type']] += 1.0;
+                if ($r['type'] === 'p') $s['p_trajets'] += 1.0;
             } else {
                 // Au moins une demi-journée saisie
                 if ($r['type_am'] && isset($s[$r['type_am']])) $s[$r['type_am']] += 0.5;
@@ -242,6 +248,8 @@ class Cra {
                 // Si seulement am ou pm → l'autre moitié = journée complète
                 if ($r['type_am'] && !$r['type_pm'] && isset($s[$r['type']])) $s[$r['type']] += 0.5;
                 if ($r['type_pm'] && !$r['type_am'] && isset($s[$r['type']])) $s[$r['type']] += 0.5;
+                // Trajet complet dès qu'au moins une demi-journée est en présentiel
+                if ($r['type_am'] === 'p' || $r['type_pm'] === 'p') $s['p_trajets'] += 1.0;
             }
         }
         return $s;

@@ -11,10 +11,10 @@ $indem  = (float)($config['indem'] ?? 0);
 $totalKm    = 0; $totalDur = 0; $totalIndem = 0;
 if (!empty($configByMonth)) {
     foreach ($configByMonth as $mIdx => $mcfg) {
-        $ms = $stats[$mIdx] ?? ['p'=>0];
-        $totalKm    += $ms['p'] * $mcfg['km'];
-        $totalDur   += $ms['p'] * $mcfg['duree'];
-        $totalIndem += $ms['p'] * $mcfg['indem'];
+        $ms = $stats[$mIdx] ?? ['p'=>0,'p_trajets'=>0];
+        $totalKm    += ($ms['p_trajets'] ?? 0) * $mcfg['km'];
+        $totalDur   += ($ms['p_trajets'] ?? 0) * $mcfg['duree'];
+        $totalIndem += ($ms['p_trajets'] ?? 0) * $mcfg['indem'];
     }
 }
 $urlPfx = $readonly && $target ? "view/{$target['id']}/" : '';
@@ -281,8 +281,8 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
         <td style="color:var(--mu);font-family:'DM Mono',monospace"><?=$s['nr']?></td>
         <td style="font-weight:700;font-family:'DM Mono',monospace"><?=$w?></td>
         <?php $mc=$configByMonth[$m]??['km'=>0,'indem'=>0]; ?>
-        <?php if ($totalKm>0): ?><td style="color:#a78bfa;font-family:'DM Mono',monospace"><?=round($s['p']*$mc['km'])?></td><?php endif; ?>
-        <?php if ($totalIndem>0): ?><td style="color:#a78bfa;font-family:'DM Mono',monospace"><?=number_format($s['p']*$mc['indem'],2,',',' ')?>€</td><?php endif; ?>
+        <?php if ($totalKm>0): ?><td style="color:#a78bfa;font-family:'DM Mono',monospace"><?=round(($s['p_trajets']??0)*$mc['km'])?></td><?php endif; ?>
+        <?php if ($totalIndem>0): ?><td style="color:#a78bfa;font-family:'DM Mono',monospace"><?=number_format(($s['p_trajets']??0)*$mc['indem'],2,',',' ')?>€</td><?php endif; ?>
       </tr>
       <?php endfor; ?>
       </tbody>

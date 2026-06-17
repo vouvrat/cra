@@ -22,7 +22,8 @@ $ouvrables = array_reduce(range(1,$total), function($c,$d) use($year,$month,$fer
 }, 0);
 
 $ys = $stats;
-$ys['s']  = $ys['s']  ?? 0;
+$ys['s']         = $ys['s']         ?? 0;
+$ys['p_trajets'] = $ys['p_trajets'] ?? 0;
 $ys['nr'] = max(0, $ouvrables - $ys['p'] - $ys['t'] - $ys['r'] - $ys['c'] - $ys['s'] - $ys['f']);
 $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
 ?>
@@ -148,9 +149,9 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
 
       <div class="trajet-box">
         <div class="trajet-title">TRAJETS DU MOIS</div>
-        <?php if ($km>0): ?><div class="trajet-row"><span class="trajet-lbl">Km A/R</span><span class="trajet-val"><?=round($ys['p']*$km)?> km</span></div><?php endif; ?>
-        <?php if ($dur>0): ?><div class="trajet-row"><span class="trajet-lbl">Temps trajet</span><span class="trajet-val"><?=fmtTime($ys['p']*$dur)?></span></div><?php endif; ?>
-        <?php if ($indem>0): ?><div class="trajet-row"><span class="trajet-lbl">Indemnités</span><span class="trajet-val"><?=number_format($ys['p']*$indem,2,',',' ')?> €</span></div><?php endif; ?>
+        <?php if ($km>0): ?><div class="trajet-row"><span class="trajet-lbl">Km A/R</span><span class="trajet-val"><?=round($ys['p_trajets']*$km)?> km</span></div><?php endif; ?>
+        <?php if ($dur>0): ?><div class="trajet-row"><span class="trajet-lbl">Temps trajet</span><span class="trajet-val"><?=fmtTime($ys['p_trajets']*$dur)?></span></div><?php endif; ?>
+        <?php if ($indem>0): ?><div class="trajet-row"><span class="trajet-lbl">Indemnités</span><span class="trajet-val"><?=number_format($ys['p_trajets']*$indem,2,',',' ')?> €</span></div><?php endif; ?>
         <?php if (!$km && !$dur && !$indem): ?><div style="font-size:11px;color:var(--mu)">Configurer les paramètres sur la vue annuelle.</div><?php endif; ?>
       </div>
     </div>

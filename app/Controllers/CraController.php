@@ -327,11 +327,21 @@ class CraController extends Controller {
                 }
                 $note   = '"' . str_replace('"','""', $notes[$date] ?? '') . '"';
                 $cfg    = $configByMonth[$m];
-                $pDays  = (!$typeAm && !$typePm && $type === 'p') ? 1.0
-                        : (($typeAm === 'p' ? 0.5 : 0) + ($typePm === 'p' ? 0.5 : 0));
-                $kmVal  = $pDays * $cfg['km'];
-                $durVal = $pDays * $cfg['duree'];
-                $indVal = $pDays * $cfg['indem'];
+                // Trajet complet (1x) dès qu'il y a du présentiel sur la journée,
+                // même en demi-journée — le trajet domicile-travail ne dépend
+                // pas de la durée de présence sur place.
+                $pTrip  = (!$typeAm && !$typePm)
+                        ? ($type === 'p' ? 1.0 : 0.0)
+                        : (($typeAm === 'p' || $typePm === 'p') ? 1.0 : 0.0);
+                $kmVal  = $pTrip * $cfg['km'];
+                $durVal = $pTrip * $cfg['duree'];
+                $indVal = $pTrip * $cfg['indem'];
+
+                $dayName = $dayNames[$dow];
+                $csv .= "$date,$dayName,\"$label\",$note,"
+                      . number_format($kmVal, 1, '.', '') . ','
+                      . number_format($durVal, 0, '.', '') . ','
+                      . number_format($indVal, 2, '.', '') . "\n";
             }
         }
 
