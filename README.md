@@ -14,9 +14,10 @@ Multi-utilisateurs, gestion d'équipes, délégations, thème clair/sombre, supp
 
 - **Saisie journalière** — Présentiel, Télétravail, RTT, Congé payé, Sans solde, Férié
 - **Demi-journées** — double-clic pour diviser une journée en matin/après-midi avec types différents
+- **Suppression rapide** — croix en haut à droite d'une case saisie, efface la journée (AM+PM compris) en un clic
 - **Vue mensuelle** — calendrier interactif (clic = journée, double-clic = demi-journées, note)
 - **Vue annuelle** — récapitulatif avec calcul automatique trajets/indemnités
-- **Config trajets par périodes** — historique des distances/durées (déménagement, changement de poste)
+- **Config trajets par périodes** — historique des distances/durées par plage de dates (date de début + date de fin optionnelle), indépendante par utilisateur
 - **Multi-utilisateurs** — rôles `admin` / `user`
 - **Équipes** — responsable gère les CRA de ses membres, y compris **comptes virtuels** (sans accès)
 - **Délégations** — consultation du CRA d'un autre utilisateur (lecture seule)
@@ -289,21 +290,20 @@ cra/
 | `c` | Congé payé | `C` |
 | `s` | Sans solde | `S` |
 | `f` | Jour férié | `F` |
-| — | Effacer | `0` |
 
 ### Saisie des demi-journées
 
 | Action | Résultat |
 |--------|----------|
 | **Clic** sur jour vide | Journée complète avec le type sélectionné |
-| **Clic** sur jour plein | Change le type (ou efface si mode `0`) |
+| **Clic** sur jour plein | Change le type (ou l'efface si on reclique le type déjà actif) |
 | **Double-clic** sur jour plein | Bascule en demi-journées — AM = type actuel, PM = vide |
 | **Clic zone haute** (demi) | Change la partie matin |
 | **Clic zone basse** (demi) | Change la partie après-midi |
 | **Double-clic** sur demi | Ouvre la note du jour |
-| Mode `0` + clic sur demi | Efface cette demi-journée |
+| **Croix** (×) en haut à droite d'une case saisie | Efface la journée entière (type complet et/ou AM+PM) |
 
-Les stats comptent **0.5 jour** par demi-journée.
+Les stats d'assiduité comptent **0.5 jour** par demi-journée. En revanche, pour le calcul des trajets (km/durée/indemnité), une demi-journée présentielle compte comme **1 trajet complet** — le déplacement domicile-travail est le même qu'on reste une demi-journée ou la journée entière.
 
 ---
 
@@ -317,8 +317,13 @@ Les stats comptent **0.5 jour** par demi-journée.
 
 ### Configuration trajets par périodes
 
-La distance/durée/indemnité est configurable **par période** avec une date d'effet.  
-Exemple : avant déménagement (40 km), après déménagement (25 km).  
+La distance/durée/indemnité est configurable **par période**, indépendamment pour chaque utilisateur (vue annuelle → bloc "Paramètres de trajet").
+
+Chaque période a une **date de début** et une **date de fin optionnelle** :
+- Date de fin laissée vide → période "en cours" (valeur actuelle) ; toute autre période encore ouverte est alors automatiquement clôturée à `date de début - 1 jour`.
+- Date de fin renseignée → période bornée manuellement (ex: mission temporaire, correctif historique), sans effet sur les autres périodes.
+
+Exemple : avant déménagement (40 km, jusqu'au 28/02), après déménagement (25 km, en cours).  
 Les stats et exports utilisent automatiquement la bonne configuration pour chaque mois.
 
 ---
