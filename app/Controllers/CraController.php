@@ -224,16 +224,31 @@ class CraController extends Controller {
         $label     = trim($this->post('label', '')) ?: 'Configuration du '.$validFrom;
 
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $validFrom)) {
-            $this->flash('error', 'Date invalide.');
+            $this->flash('error', 'Date de début invalide.');
             $this->redirect('cra');
+        }
+
+        // Date de fin optionnelle — vide = période en cours (valeur actuelle)
+        $rawValidTo = trim((string)$this->post('valid_to', ''));
+        $validTo    = null;
+        if ($rawValidTo !== '') {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawValidTo)) {
+                $this->flash('error', 'Date de fin invalide.');
+                $this->redirect('cra');
+            }
+            if ($rawValidTo < $validFrom) {
+                $this->flash('error', 'La date de fin doit être postérieure à la date de début.');
+                $this->redirect('cra');
+            }
+            $validTo = $rawValidTo;
         }
 
         $periodId = (int)$this->post('period_id', 0);
         if ($periodId > 0) {
-            Cra::updateConfigPeriod($periodId, $targetId, $km, $duree, $indem, $validFrom, $label);
+            Cra::updateConfigPeriod($periodId, $targetId, $km, $duree, $indem, $validFrom, $validTo, $label);
             $this->flash('success', 'Configuration mise à jour.');
         } else {
-            Cra::addConfigPeriod($targetId, $km, $duree, $indem, $validFrom, $label);
+            Cra::addConfigPeriod($targetId, $km, $duree, $indem, $validFrom, $validTo, $label);
             $this->flash('success', 'Nouvelle période de configuration ajoutée.');
         }
 

@@ -141,9 +141,15 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
           <label>LIBELLÉ (ex: Après déménagement, Nouveau poste…)</label>
           <input type="text" name="label" id="periodLabel" placeholder="Description de ce changement" required>
         </div>
-        <div class="form-group">
-          <label>DATE D'EFFET</label>
-          <input type="date" name="valid_from" id="periodFrom" required value="<?= date('Y-m-d') ?>">
+        <div class="form-row">
+          <div class="form-group">
+            <label>DATE DE DÉBUT</label>
+            <input type="date" name="valid_from" id="periodFrom" required value="<?= date('Y-m-d') ?>">
+          </div>
+          <div class="form-group">
+            <label>DATE DE FIN <span style="font-weight:400;color:var(--mu)">(vide = valeur actuelle)</span></label>
+            <input type="date" name="valid_to" id="periodTo">
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -160,7 +166,7 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
           </div>
         </div>
         <div style="font-size:11px;color:var(--mu);margin-bottom:14px">
-          Les périodes précédentes sont automatiquement clôturées à la date d'effet - 1 jour.
+          Laisse la date de fin vide pour en faire la valeur actuelle — la période encore "en cours" est alors automatiquement clôturée. Si tu précises une date de fin, les autres périodes ne sont pas modifiées.
         </div>
         <div class="modal-actions">
           <button type="button" class="btn" onclick="closePeriodModal()">Annuler</button>
@@ -178,6 +184,7 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
       document.getElementById('periodId').value    = period.id;
       document.getElementById('periodLabel').value = period.label;
       document.getElementById('periodFrom').value  = period.valid_from;
+      document.getElementById('periodTo').value    = period.valid_to || '';
       document.getElementById('periodKm').value    = period.km;
       document.getElementById('periodDuree').value = period.duree;
       document.getElementById('periodIndem').value = period.indem;
@@ -187,13 +194,22 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
       document.getElementById('periodId').value    = '0';
       document.getElementById('periodLabel').value = '';
       document.getElementById('periodFrom').value  = new Date().toISOString().split('T')[0];
+      document.getElementById('periodTo').value    = '';
       document.getElementById('periodKm').value    = '0';
       document.getElementById('periodDuree').value = '0';
       document.getElementById('periodIndem').value = '0';
       document.getElementById('periodSubmitBtn').textContent = 'Ajouter';
     }
+    syncPeriodToMin();
     modal.classList.add('open');
   }
+  function syncPeriodToMin(){
+    const from = document.getElementById('periodFrom');
+    const to   = document.getElementById('periodTo');
+    to.min = from.value;
+    if (to.value && to.value < from.value) to.value = '';
+  }
+  document.getElementById('periodFrom').addEventListener('change', syncPeriodToMin);
   function closePeriodModal() {
     document.getElementById('periodModal').classList.remove('open');
   }

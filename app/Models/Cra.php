@@ -140,24 +140,24 @@ class Cra {
         );
     }
 
-    /** Ajoute une nouvelle période de config et ferme la précédente */
+    /**
+     * Ajoute une nouvelle période de config.
+     * Si $validTo est null, cette période devient la période "en cours" :
+     * toute autre période encore ouverte (valid_to NULL) démarrée avant elle
+     * est automatiquement clôturée à $validFrom - 1 jour.
+     * Si $validTo est fourni, la période est insérée telle quelle, sans
+     * toucher aux autres périodes — les bornes sont gérées manuellement.
+     */
     public static function addConfigPeriod(
         int $userId, float $km, float $duree, float $indem,
-        string $validFrom, string $label
+        string $validFrom, ?string $validTo, string $label
     ): void {
-        // Fermer la période précédente qui débordait sur cette date
+        if ($validTo === null) {
+            self::closeOpenPeriodsBefore($userId, $validFrom, null);
+        }
         DB::query(
-            "UPDATE config_periods
-             SET valid_to = DATE(?, '-1 day')
-             WHERE user_id = ?
-               AND valid_from < ?
-               AND (valid_to IS NULL OR valid_to >= ?)",
-            [$validFrom, $userId, $validFrom, $validFrom]
-        );
-        // Insérer la nouvelle période
-        DB::query(
-            "INSERT INTO config_periods (user_id,km,duree,indem,valid_from,valid_to,label) VALUES (?,?,?,?,?,NULL,?)",
-            [$userId, $km, $duree, $indem, $validFrom, $label]
+            "INSERT INTO config_periods (user_id,km,duree,indem,valid_from,valid_to,label) VALUES (?,?,?,?,?,?,?)",
+            [$userId, $km, $duree, $indem, $validFrom, $validTo, $label]
         );
     }
 
@@ -172,41 +172,51 @@ class Cra {
 
         DB::query("DELETE FROM config_periods WHERE id=?", [$id]);
 
-        // Rouvrir la période précédente si nécessaire (remettre valid_to à NULL)
-        $prev = DB::fetchOne(
-            "SELECT id FROM config_periods WHERE user_id=? AND valid_from < ? ORDER BY valid_from DESC LIMIT 1",
-            [$userId, $period['valid_from']]
-        );
-        if ($prev) {
-            DB::query("UPDATE config_periods SET valid_to=NULL WHERE id=?", [$prev['id']]);
-        }
-    }
-
-    public static function updateConfigPeriod(int $id, int $userId, float $km, float $duree, float $indem, string $validFrom, string $label): void {
-        DB::query(
-            "UPDATE config_periods SET km=?,duree=?,indem=?,valid_from=?,label=? WHERE id=? AND user_id=?",
-            [$km, $duree, $indem, $validFrom, $label, $id, $userId]
-        );
-        // Recalculer les valid_to de toutes les périodes de cet utilisateur
-        self::recalcPeriodBounds($userId);
-    }
-
-    /** Recalcule les valid_to de toutes les périodes (ordre chronologique) */
-    private static function recalcPeriodBounds(int $userId): void {
-        $periods = DB::fetchAll(
-            "SELECT id, valid_from FROM config_periods WHERE user_id=? ORDER BY valid_from ASC",
-            [$userId]
-        );
-        for ($i = 0; $i < count($periods); $i++) {
-            if ($i < count($periods) - 1) {
-                $nextFrom = $periods[$i+1]['valid_from'];
-                $validTo  = date('Y-m-d', strtotime($nextFrom . ' -1 day'));
-                DB::query("UPDATE config_periods SET valid_to=? WHERE id=?", [$validTo, $periods[$i]['id']]);
-            } else {
-                // Dernière période = ouverte
-                DB::query("UPDATE config_periods SET valid_to=NULL WHERE id=?", [$periods[$i]['id']]);
+        // Si la période supprimée était la période "en cours" (sans date de fin),
+        // rouvrir la plus récente des périodes restantes pour garder une
+        // configuration active aujourd'hui. Les périodes aux bornes fixées
+        // manuellement par l'utilisateur ne sont jamais touchées.
+        if ($period['valid_to'] === null) {
+            $prev = DB::fetchOne(
+                "SELECT id FROM config_periods WHERE user_id=? ORDER BY valid_from DESC LIMIT 1",
+                [$userId]
+            );
+            if ($prev) {
+                DB::query("UPDATE config_periods SET valid_to=NULL WHERE id=?", [$prev['id']]);
             }
         }
+    }
+
+    /**
+     * Met à jour une période existante avec des bornes explicites.
+     * Si $validTo est null, cette période redevient la période "en cours" :
+     * toute autre période encore ouverte démarrée avant elle est clôturée.
+     */
+    public static function updateConfigPeriod(int $id, int $userId, float $km, float $duree, float $indem, string $validFrom, ?string $validTo, string $label): void {
+        DB::query(
+            "UPDATE config_periods SET km=?,duree=?,indem=?,valid_from=?,valid_to=?,label=? WHERE id=? AND user_id=?",
+            [$km, $duree, $indem, $validFrom, $validTo, $label, $id, $userId]
+        );
+        if ($validTo === null) {
+            self::closeOpenPeriodsBefore($userId, $validFrom, $id);
+        }
+    }
+
+    /**
+     * Clôture toute période encore "en cours" (valid_to NULL) démarrée avant
+     * $validFrom, pour qu'il n'y ait jamais deux périodes ouvertes en même
+     * temps. $excludeId permet d'ignorer la période en cours d'insertion/édition.
+     */
+    private static function closeOpenPeriodsBefore(int $userId, string $validFrom, ?int $excludeId): void {
+        $sql = "UPDATE config_periods
+                SET valid_to = DATE(?, '-1 day')
+                WHERE user_id = ? AND valid_to IS NULL AND valid_from < ?";
+        $params = [$validFrom, $userId, $validFrom];
+        if ($excludeId !== null) {
+            $sql .= " AND id != ?";
+            $params[] = $excludeId;
+        }
+        DB::query($sql, $params);
     }
 
     /** Ancienne API conservée pour compatibilité */
