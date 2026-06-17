@@ -137,6 +137,9 @@ a{color:inherit;text-decoration:none}
 .cal-day.df{background:var(--fb);color:var(--f);border-color:rgba(139,139,139,.3)}
 .cal-day.ds{background:var(--sb);color:var(--s);border-color:rgba(168,85,247,.3)}
 .cal-day.has-note::after{content:'';position:absolute;bottom:2px;right:2px;width:4px;height:4px;border-radius:50%;background:var(--ac)}
+.day-clear{position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;font-family:'DM Mono',monospace;color:#fff;background:rgba(0,0,0,.4);cursor:pointer;z-index:3;opacity:.8;transition:all .12s}
+.day-clear:hover{opacity:1;background:#ef4444}
+body.light .day-clear{background:rgba(0,0,0,.22)}
 .note-indicator{width:4px;height:4px;border-radius:50%;background:var(--ac)}
 
 /* MONTH LAYOUT */
@@ -154,7 +157,6 @@ a{color:inherit;text-decoration:none}
 .type-btn.sel-c{background:var(--cb);border-color:var(--c);color:var(--c)}
 .type-btn.sel-f{background:var(--fb);border-color:var(--f);color:var(--f)}
 .type-btn.sel-s{background:var(--sb);border-color:var(--s);color:var(--s)}
-.type-btn.sel-none{background:var(--bg3);border-color:var(--mu);color:var(--mu)}
 .type-key{font-family:'DM Mono',monospace;font-size:10px;background:rgba(255,255,255,.06);border-radius:4px;padding:2px 5px;margin-left:auto}
 
 /* TRAJET BOX */

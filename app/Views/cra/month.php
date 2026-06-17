@@ -89,6 +89,7 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
           $typeAm = $dayData ? $dayData['am'] : null;
           $typePm = $dayData ? $dayData['pm'] : null;
           $isHalf = $typeAm || $typePm;
+          $hasContent = !$isWe && !$readonly && ($type || $isHalf);
 
           $cls = 'cal-day';
           if ($isWe) $cls .= ' we';
@@ -108,7 +109,7 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
             ondblclick="dblClickDay(this)"
           <?php endif; ?>
           title="<?=$date?><?=!empty($notes[$date])?' — '.htmlspecialchars($notes[$date]):''?>"
-        ><?php if ($isHalf):
+        ><?php if ($hasContent): ?><span class="day-clear" onclick="clearDay(this, event)" title="Effacer ce jour">×</span><?php endif; ?><?php if ($isHalf):
           $BG = ['p'=>'#1e3a5f','t'=>'#14412a','r'=>'#422d0a','c'=>'#4a1030','s'=>'#3b1f6e','f'=>'#2a2a2a'];
           $FG = ['p'=>'#3b82f6','t'=>'#22c55e','r'=>'#f59e0b','c'=>'#ec4899','s'=>'#a855f7','f'=>'#8b8b8b'];
           $bgAm = $typeAm ? ($BG[$typeAm]??'#232328') : '#232328';
@@ -126,7 +127,7 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
           </svg><?php else: ?><?=$d?><?php endif; ?></div>
         <?php endfor; ?>
       </div>
-      <p class="hint">Clic = journée complète · Double-clic = basculer en demi-journées · Sur demi : clic haut = matin, clic bas = après-midi</p>
+      <p class="hint">Clic = journée complète · Double-clic = basculer en demi-journées · Sur demi : clic haut = matin, clic bas = après-midi · Croix en haut à droite = effacer</p>
     </div>
 
     <!-- RIGHT PANEL -->
@@ -141,7 +142,6 @@ $navPfx   = ($readonly && $target) ? "view/{$target['id']}/" : 'cra/';
           <div class="type-btn" id="btn-c" onclick="setMode('c')"><span class="dot" style="background:var(--c)"></span>Congé payé<span class="type-key">C</span></div>
           <div class="type-btn" id="btn-s" onclick="setMode('s')"><span class="dot" style="background:var(--s)"></span>Sans solde<span class="type-key">S</span></div>
           <div class="type-btn" id="btn-f" onclick="setMode('f')"><span class="dot" style="background:var(--f)"></span>Férié<span class="type-key">F</span></div>
-          <div class="type-btn" id="btn-none" onclick="setMode('none')"><span>⌫</span>Effacer<span class="type-key">0</span></div>
         </div>
       </div>
       <?php endif; ?>
@@ -209,7 +209,7 @@ const notes = <?= json_encode($notes) ?>;
 
 function setMode(m){
   mode = m;
-  ['p','t','r','c','s','f','none'].forEach(k => {
+  ['p','t','r','c','s','f'].forEach(k => {
     const btn = document.getElementById('btn-'+k);
     if (btn) btn.className = 'type-btn' + (k===m ? ' sel-'+k : '');
   });
@@ -221,7 +221,8 @@ setMode('p');
 //  • Cellule vide ou type complet → applique le type en journée complète
 //  • Clic sur moitié AM d'une cellule half → change AM
 //  • Clic sur moitié PM d'une cellule half → change PM
-//  • mode 'none' → efface (remet en vide)
+//  • Reclic sur une journée complète déjà au type sélectionné → l'efface
+//  • Suppression explicite → croix en haut à droite de la case (clearDay)
 function clickDay(el, event){
   const date    = el.dataset.date;
   const isHalf  = el.classList.contains('half');
@@ -232,37 +233,42 @@ function clickDay(el, event){
     const relY  = event.clientY - rect.top;
     const half  = relY < rect.height / 2 ? 'am' : 'pm';
 
-    const newType = mode === 'none' ? null : mode;
-    if (half === 'am') el.dataset.am = newType || '';
-    else               el.dataset.pm = newType || '';
+    if (half === 'am') el.dataset.am = mode;
+    else               el.dataset.pm = mode;
 
     const am = el.dataset.am || null;
     const pm = el.dataset.pm || null;
 
-    // Si tout est effacé → journée vide
-    if (!am && !pm) {
-      el.dataset.type = '';
-      el.classList.remove('half');
-      renderDayEl(el, null, null, null);
-      saveDay(date, null);
-      return;
-    }
-
     const fullType = am || pm || el.dataset.type || null;
     el.dataset.type = fullType || '';
     renderDayEl(el, fullType, am, pm);
-    saveHalfDay(date, half, newType);
+    saveHalfDay(date, half, mode);
 
   } else {
     // Journée complète
     const current = el.dataset.type || null;
-    const newType = (mode === 'none' || current === mode) ? null : mode;
+    const newType = (current === mode) ? null : mode;
     el.dataset.am = '';
     el.dataset.pm = '';
     el.dataset.type = newType || '';
     renderDayEl(el, newType, null, null);
     saveDay(date, newType);
   }
+}
+
+// ── CROIX D'EFFACEMENT (coin haut-droit de la case) ─────────────────────────
+// Efface entièrement la journée (type complet et/ou demi-journées AM+PM)
+// en un seul clic, sans passer par un mode de sélection.
+function clearDay(btn, event){
+  event.stopPropagation();
+  const el = btn.closest('.cal-day');
+  if (!el) return;
+  const date = el.dataset.date;
+  el.dataset.type = '';
+  el.dataset.am = '';
+  el.dataset.pm = '';
+  renderDayEl(el, null, null, null);
+  saveDay(date, null);
 }
 
 // ── DOUBLE-CLIC : bascule journée complète ↔ demi-journées ─────────────────
@@ -296,6 +302,15 @@ function renderDayEl(el, type, am, pm){
     .filter(cls => !/^d[ptrcfs]$/.test(cls) && cls !== 'half')
     .join(' ');
   el.innerHTML = '';
+
+  if (type || am || pm) {
+    const clearBtn = document.createElement('span');
+    clearBtn.className = 'day-clear';
+    clearBtn.title = 'Effacer ce jour';
+    clearBtn.textContent = '×';
+    clearBtn.onclick = (e) => clearDay(clearBtn, e);
+    el.appendChild(clearBtn);
+  }
 
   if (am || pm) {
     el.classList.add('half');
@@ -350,9 +365,9 @@ function renderDayEl(el, type, am, pm){
 
   } else if (type) {
     el.classList.add('d' + type);
-    el.textContent = d;
+    el.appendChild(document.createTextNode(d));
   } else {
-    el.textContent = d;
+    el.appendChild(document.createTextNode(d));
   }
 }
 
@@ -387,7 +402,7 @@ function submitNote(){
 document.addEventListener('keydown', e => {
   if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
   if (e.key === 'Escape'){ closeNote(); return; }
-  const map = {p:'p',t:'t',r:'r',c:'c',s:'s',f:'f','0':'none'};
+  const map = {p:'p',t:'t',r:'r',c:'c',s:'s',f:'f'};
   if (map[e.key.toLowerCase()]) setMode(map[e.key.toLowerCase()]);
 });
 document.getElementById('noteModal').addEventListener('click', e => {
