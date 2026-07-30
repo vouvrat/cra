@@ -184,9 +184,14 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid var(--bd);color:var(-
 tr:hover td{background:var(--bg3)}
 tr.total td{border-top:2px solid var(--bd);font-weight:700;color:var(--tx);background:var(--bg3)}
 .badge{display:inline-block;border-radius:4px;padding:2px 8px;font-size:11px;font-family:'DM Mono',monospace;font-weight:600}
-.bp{background:var(--pb);color:var(--p)} .bt{background:var(--tb);color:var(--t)}
-.br{background:var(--rb);color:var(--r)} .bc{background:var(--cb);color:var(--c)}
-.bf{background:var(--fb);color:var(--f)} .bs{background:var(--sb);color:var(--s)}
+/* Dark mode : texte blanc sur fond coloré sombre → bon contraste */
+.bp{background:var(--pb);color:#e0eeff} .bt{background:var(--tb);color:#d0ffe0}
+.br{background:var(--rb);color:#fff3cc} .bc{background:var(--cb);color:#ffd0e8}
+.bf{background:var(--fb);color:#e0e0e0} .bs{background:var(--sb);color:#ead0ff}
+/* Light mode : texte coloré sur fond pastel → bon contraste */
+body.light .bp{color:var(--p)} body.light .bt{color:var(--t)}
+body.light .br{color:var(--r)} body.light .bc{color:var(--c)}
+body.light .bf{color:var(--f)} body.light .bs{color:var(--s)}
 .badge-admin{background:rgba(245,158,11,.15);color:var(--r);border-radius:4px;padding:2px 7px;font-size:11px;font-family:'DM Mono',monospace}
 .badge-user{background:rgba(108,99,255,.12);color:var(--ac);border-radius:4px;padding:2px 7px;font-size:11px;font-family:'DM Mono',monospace}
 .badge-off{background:rgba(139,139,139,.12);color:var(--mu);border-radius:4px;padding:2px 7px;font-size:11px;font-family:'DM Mono',monospace}
