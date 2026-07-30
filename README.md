@@ -403,12 +403,11 @@ docker exec cra-app chmod -R 700 /var/www/html/data
 **Réinitialiser le mot de passe admin**
 ```bash
 docker exec -it cra-app php -r "
-require '/var/www/html/config/config.php';
-\$pdo = new PDO('sqlite:' . DB_FILE);
+\$pdo  = new PDO('sqlite:/var/www/html/data/cra.sqlite');
 \$hash = password_hash('NouveauMotDePasse', PASSWORD_DEFAULT);
-\$pdo->prepare('UPDATE users SET password=? WHERE username=?')
-    ->execute([\$hash, 'admin']);
-echo 'Mot de passe mis à jour.' . PHP_EOL;
+\$stmt = \$pdo->prepare('UPDATE users SET password=? WHERE username=?');
+\$stmt->execute([\$hash, 'admin']);
+echo 'OK : ' . \$stmt->rowCount() . ' ligne(s) mise(s) à jour.' . PHP_EOL;
 "
 ```
 
