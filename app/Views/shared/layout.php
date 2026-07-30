@@ -180,9 +180,9 @@ body.light .day-clear{background:rgba(0,0,0,.22)}
 /* TABLES */
 table{width:100%;border-collapse:collapse}
 th{text-align:left;font-size:11px;font-family:'DM Mono',monospace;color:var(--mu);letter-spacing:.04em;padding:8px 12px;border-bottom:1px solid var(--bd);font-weight:500}
-td{padding:9px 12px;font-size:13px;border-bottom:1px solid #1e1e24}
-tr:hover td{background:#1e1e24}
-tr.total td{border-top:1px solid var(--bd);font-weight:700;color:var(--ac);background:rgba(108,99,255,.06)}
+td{padding:9px 12px;font-size:13px;border-bottom:1px solid var(--bd);color:var(--tx)}
+tr:hover td{background:var(--bg3)}
+tr.total td{border-top:2px solid var(--bd);font-weight:700;color:var(--tx);background:var(--bg3)}
 .badge{display:inline-block;border-radius:4px;padding:2px 8px;font-size:11px;font-family:'DM Mono',monospace;font-weight:600}
 .bp{background:var(--pb);color:var(--p)} .bt{background:var(--tb);color:var(--t)}
 .br{background:var(--rb);color:var(--r)} .bc{background:var(--cb);color:var(--c)}

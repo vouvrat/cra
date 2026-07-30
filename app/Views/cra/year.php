@@ -91,22 +91,22 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
       <?php foreach ($configPeriods as $period): ?>
       <?php $isCurrent = is_null($period['valid_to']); ?>
       <tr style="<?= $isCurrent ? 'background:rgba(108,99,255,.05)' : '' ?>">
-        <td style="padding:9px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #1e1e24">
+        <td style="padding:9px 14px;font-size:13px;font-weight:600;border-bottom:1px solid var(--bd)">
           <?= htmlspecialchars($period['label']) ?>
           <?php if ($isCurrent): ?>
           <span style="font-size:10px;background:rgba(34,197,94,.12);color:var(--t);border-radius:3px;padding:1px 6px;font-family:'DM Mono',monospace;margin-left:6px;font-weight:400">ACTUELLE</span>
           <?php endif; ?>
         </td>
-        <td style="padding:9px 14px;font-size:12px;font-family:'DM Mono',monospace;border-bottom:1px solid #1e1e24;color:var(--mu)">
+        <td style="padding:9px 14px;font-size:12px;font-family:'DM Mono',monospace;border-bottom:1px solid var(--bd);color:var(--mu)">
           <?= date('d/m/Y', strtotime($period['valid_from'])) ?>
         </td>
-        <td style="padding:9px 14px;font-size:12px;font-family:'DM Mono',monospace;border-bottom:1px solid #1e1e24;color:var(--mu)">
+        <td style="padding:9px 14px;font-size:12px;font-family:'DM Mono',monospace;border-bottom:1px solid var(--bd);color:var(--mu)">
           <?= $period['valid_to'] ? date('d/m/Y', strtotime($period['valid_to'])) : '<span style="color:var(--t)">En cours</span>' ?>
         </td>
-        <td style="padding:9px 14px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid #1e1e24"><?= $period['km'] ?></td>
-        <td style="padding:9px 14px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid #1e1e24"><?= $period['duree'] ?></td>
-        <td style="padding:9px 14px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid #1e1e24"><?= $period['indem'] > 0 ? $period['indem'].' €' : '—' ?></td>
-        <td style="padding:9px 14px;border-bottom:1px solid #1e1e24">
+        <td style="padding:9px 14px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid var(--bd)"><?= $period['km'] ?></td>
+        <td style="padding:9px 14px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid var(--bd)"><?= $period['duree'] ?></td>
+        <td style="padding:9px 14px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid var(--bd)"><?= $period['indem'] > 0 ? $period['indem'].' €' : '—' ?></td>
+        <td style="padding:9px 14px;border-bottom:1px solid var(--bd)">
           <div style="display:flex;gap:6px;justify-content:flex-end">
             <button class="btn btn-sm" onclick='openPeriodModal(<?= htmlspecialchars(json_encode($period)) ?>)'>✏</button>
             <?php if (count($configPeriods) > 1): ?>
