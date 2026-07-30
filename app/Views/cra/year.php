@@ -154,7 +154,7 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
         <div class="form-row">
           <div class="form-group">
             <label>DISTANCE A/R (KM)</label>
-            <input type="number" name="km" id="periodKm" min="0" max="9999" step="0.5" value="0">
+            <input type="number" name="km" id="periodKm" min="0" max="9999" step="0.1" value="0">
           </div>
           <div class="form-group">
             <label>DURÉE A/R (MIN)</label>
@@ -162,7 +162,7 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
           </div>
           <div class="form-group">
             <label>INDEMNITÉ/JOUR (€)</label>
-            <input type="number" name="indem" id="periodIndem" min="0" max="999" step="0.5" value="0">
+            <input type="number" name="indem" id="periodIndem" min="0" max="999" step="0.01" value="0">
           </div>
         </div>
         <div style="font-size:11px;color:var(--mu);margin-bottom:14px">
