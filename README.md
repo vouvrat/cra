@@ -1,6 +1,6 @@
 # CRA — Compte Rendu d'Activité
 
-[![PHP](https://img.shields.io/badge/PHP-8.3-777BB4?logo=php)](https://php.net)
+[![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?logo=php)](https://php.net)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker)](https://docker.com)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite)](https://sqlite.org)
 [![License](https://img.shields.io/badge/Licence-MIT-green)](LICENSE)
