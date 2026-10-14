@@ -1,4 +1,4 @@
-FROM php:8.3-apache
+FROM php:8.6-rc-zts-alpine3.24
 
 # Dépendances système
 RUN apt-get update --fix-missing && apt-get install -y \
