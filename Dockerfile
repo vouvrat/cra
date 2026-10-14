@@ -1,7 +1,9 @@
 FROM php:8.3-apache
 
 # Dépendances système
-RUN apt-get update --fix-missing && apt-get install -y \
+# 'apt-get upgrade' applique les correctifs de sécurité Debian publiés depuis
+# la construction de l'image de base (c'est ce que Snyk signale pour Perl).
+RUN apt-get update --fix-missing && apt-get upgrade -y && apt-get install -y \
     libsqlite3-dev \
     libicu-dev \
     libseccomp-dev \
