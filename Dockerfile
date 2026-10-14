@@ -1,4 +1,4 @@
-FROM php:8.5-apache
+FROM php:8.3-apache
 
 # Dépendances système
 # 'apt-get upgrade' applique les correctifs de sécurité Debian publiés depuis
