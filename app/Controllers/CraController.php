@@ -1,6 +1,6 @@
 <?php namespace Controllers;
 use Core\Controller;
-use Models\{Cra, User};
+use Models\{Cra, User, Leave};
 
 class CraController extends Controller {
 
@@ -75,12 +75,20 @@ class CraController extends Controller {
         $configByMonth  = Cra::getConfigByMonth($userId, $year); // config historique par mois
         $configPeriods  = Cra::getConfigPeriods($userId);  // toutes les périodes
         $accessible     = $me['role'] === 'admin' ? User::all() : User::accessibleBy($me['id']);
+        // Soldes RTT/CP : exercice en cours si on regarde l'année courante, sinon celui qui démarre en juin de l'année affichée
+        $leavePeriod = ($year === (int)date('Y')) ? Leave::periodOf(date('Y-m-d')) : $year;
+        $leave = [
+            'r' => Leave::summary($userId, 'r', $leavePeriod),
+            'c' => Leave::summary($userId, 'c', $leavePeriod),
+        ];
 
         $this->view('shared.layout', [
             'me'            => $me,
             'target'        => $target,
             'readonly'      => $readonly,
             'year'          => $year,
+            'leave'         => $leave,
+            'leavePeriod'   => $leavePeriod,
             'stats'         => $stats,
             'yearStats'     => $yearStats,
             'config'        => $config,
@@ -281,6 +289,80 @@ class CraController extends Controller {
         } else {
             $this->redirect("cra/year/$year");
         }
+    }
+
+    // ── SOLDES RTT / CONGÉS ──────────────────────────────────────────────────
+    /** L'utilisateur $me peut-il modifier les droits de $target ? (soi-même, ou compte virtuel dont on est responsable) */
+    private function canEditLeave(array $me, array $target): bool {
+        if ($me['id'] === $target['id']) return true;
+        if (empty($target['virtual'])) return false;
+        return $me['role'] === 'admin' || \Models\Team::isManagerOf($me['id'], $target['id']);
+    }
+
+    public function soldes(string $period = ''): void {
+        $me       = $this->requireAuth();
+        $targetId = isset($_GET['u']) ? (int)$_GET['u'] : $me['id'];
+        $target   = $this->resolveUser($targetId);
+        if (!$target) { $this->flash('error', 'Accès non autorisé.'); $this->redirect('cra'); }
+
+        $period = ($period !== '' && ctype_digit($period)) ? (int)$period : Leave::periodOf(date('Y-m-d'));
+        if ($period < 2000 || $period > 2100) $period = Leave::periodOf(date('Y-m-d'));
+
+        $isSelf   = $target['id'] === $me['id'];
+        $readonly = !$this->canEditLeave($me, $target);
+        $periods  = Leave::periodsWithData($target['id']);
+        $history  = [];
+        foreach ($periods as $p) {
+            $history[$p] = ['r' => Leave::summary($target['id'], 'r', $p), 'c' => Leave::summary($target['id'], 'c', $p)];
+        }
+        $accessible = $me['role'] === 'admin' ? User::all() : User::accessibleBy($me['id']);
+
+        $this->view('shared.layout', [
+            'me'         => $me,
+            'target'     => $isSelf ? null : $target,
+            'readonly'   => $readonly,
+            'year'       => (int)date('Y'),
+            'period'     => $period,
+            'leave'      => ['r' => Leave::summary($target['id'], 'r', $period), 'c' => Leave::summary($target['id'], 'c', $period)],
+            'history'    => $history,
+            'accessible' => $accessible,
+            'view'       => 'soldes',
+            'flash'      => $this->getFlash(),
+        ]);
+    }
+
+    public function saveSoldes(): void {
+        $me = $this->requireAuth();
+        $this->verifyCsrf();
+
+        $targetId = $this->post('target_id') ? (int)$this->post('target_id') : $me['id'];
+        $target   = User::find($targetId);
+        if (!$target || !$this->canEditLeave($me, $target)) {
+            $this->flash('error', 'Accès non autorisé.');
+            $this->redirect('cra');
+        }
+
+        $type   = (string)$this->post('type');
+        $period = (int)$this->post('period');
+        if (!isset(Leave::TYPES[$type]) || $period < 2000 || $period > 2100) {
+            $this->flash('error', 'Données invalides.');
+            $this->redirect('cra/soldes');
+        }
+
+        // Accepte "12,5" comme "12.5"
+        $parse = fn(string $k) => filter_var(str_replace(',', '.', trim((string)$this->post($k, '0'))), FILTER_VALIDATE_FLOAT);
+        $acquis = $parse('acquis');
+        $report = $parse('report');
+        if ($acquis === false || $report === false || $acquis < 0 || $acquis > 365 || $report < 0 || $report > 365) {
+            $this->flash('error', 'Valeurs invalides (nombre de jours entre 0 et 365).');
+        } elseif (fmod($acquis * 2, 1.0) != 0.0 || fmod($report * 2, 1.0) != 0.0) {
+            // Le CRA compte en demi-journées : un solde en 0,3 j ne pourrait jamais être consommé exactement.
+            $this->flash('error', 'Saisissez des jours entiers ou des demi-journées (ex : 12 ou 12,5).');
+        } else {
+            Leave::save($targetId, $type, $period, (float)$acquis, (float)$report);
+            $this->flash('success', Leave::TYPES[$type] . ' ' . Leave::label($period) . ' enregistré.');
+        }
+        $this->redirect("cra/soldes/$period" . ($targetId !== $me['id'] ? "?u=$targetId" : ''));
     }
 
     public function export(string $year): void {

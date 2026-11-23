@@ -80,6 +80,16 @@ class DB {
                 created_at TEXT    NOT NULL DEFAULT (datetime('now')),
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             );
+            CREATE TABLE IF NOT EXISTS leave_balances (
+                id      INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                type    TEXT    NOT NULL,
+                period  INTEGER NOT NULL,
+                acquis  REAL    NOT NULL DEFAULT 0,
+                report  REAL    NOT NULL DEFAULT 0,
+                UNIQUE(user_id, type, period),
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
             CREATE TABLE IF NOT EXISTS delegations (
                 id        INTEGER PRIMARY KEY AUTOINCREMENT,
                 owner_id  INTEGER NOT NULL,

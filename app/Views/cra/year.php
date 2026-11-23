@@ -1,5 +1,5 @@
 <?php
-function fmtStat($v) { return $v == floor($v) ? (int)$v : number_format($v,1,',',''); }
+if (!function_exists('fmtStat')) { function fmtStat($v) { return $v == floor($v) ? (int)$v : number_format($v,1,',',''); } }
 $ys     = $yearStats;
 $worked = $ys['p'] + $ys['t'];
 $pct    = $worked ? round($ys['p'] / $worked * 100) : 0;
@@ -57,6 +57,32 @@ $mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','S
     <div class="stat-card cw"><div class="stat-lbl">TRAVAILLÉ</div><div class="stat-val"><?=$worked?></div><div class="stat-sub"><?=$pct?>% présent.</div></div>
     <?php if ($totalKm>0): ?><div class="stat-card ckm"><div class="stat-lbl">KM TRAJET</div><div class="stat-val"><?=number_format($totalKm,0,',',' ')?></div><div class="stat-sub">km sur l'année</div></div><?php endif; ?>
     <?php if ($totalIndem>0): ?><div class="stat-card ckm"><div class="stat-lbl">INDEMNITÉS</div><div class="stat-val"><?=number_format($totalIndem,2,',',' ')?> €</div></div><?php endif; ?>
+  </div>
+
+  <!-- SOLDES RTT / CP -->
+  <?php $soldesUrl = BASE_URL.'cra/soldes/'.$leavePeriod.(!empty($target) && $target['id'] !== $me['id'] ? '?u='.$target['id'] : ''); ?>
+  <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rad);margin-bottom:20px;padding:12px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+      <div>
+        <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--mu);letter-spacing:.06em">SOLDES — EXERCICE <?= Models\Leave::label($leavePeriod) ?></span>
+        <span style="font-size:11px;color:var(--mu);margin-left:10px">du 01/06 au 31/05</span>
+      </div>
+      <a class="btn btn-sm" href="<?= $soldesUrl ?>">Détail et droits</a>
+    </div>
+    <div class="stats-grid" style="margin-bottom:0">
+    <?php foreach (['r'=>'cr','c'=>'cc'] as $t => $cls): $L = $leave[$t]; ?>
+      <div class="stat-card <?= $cls ?>">
+        <div class="stat-lbl"><?= mb_strtoupper($L['label']) ?> RESTANTS</div>
+        <?php if ($L['configured']): ?>
+        <div class="stat-val" style="<?= $L['final'] < 0 ? 'color:var(--c)' : '' ?>"><?= fmtStat($L['final']) ?></div>
+        <div class="stat-sub"><?= fmtStat($L['acquis'] + $L['report']) ?> droits · <?= fmtStat($L['taken']) ?> pris<?= $L['planned'] > 0 ? ' · '.fmtStat($L['planned']).' posés' : '' ?></div>
+        <?php else: ?>
+        <div class="stat-val">—</div>
+        <div class="stat-sub"><a href="<?= $soldesUrl ?>">droits à saisir</a> · <?= fmtStat($L['taken'] + $L['planned']) ?> j saisis</div>
+        <?php endif; ?>
+      </div>
+    <?php endforeach; ?>
+    </div>
   </div>
 
   <?php if (!$readonly): ?>

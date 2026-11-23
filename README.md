@@ -17,6 +17,7 @@ Multi-utilisateurs, gestion d'équipes, délégations, thème clair/sombre, supp
 - **Suppression rapide** — croix en haut à droite d'une case saisie, efface la journée (AM+PM compris) en un clic
 - **Vue mensuelle** — calendrier interactif (clic = journée, double-clic = demi-journées, note)
 - **Vue annuelle** — récapitulatif avec calcul automatique trajets/indemnités
+- **Soldes RTT / congés payés** — droits et report saisis par exercice (1er juin → 31 mai), jours pris calculés automatiquement depuis le CRA, solde à ce jour et prévisionnel
 - **Config trajets par périodes** — historique des distances/durées par plage de dates (date de début + date de fin optionnelle), indépendante par utilisateur
 - **Multi-utilisateurs** — rôles `admin` / `user`
 - **Équipes** — responsable gère les CRA de ses membres, y compris **comptes virtuels** (sans accès)
@@ -251,12 +252,14 @@ cra/
 │   ├── Models/
 │   │   ├── User.php                Utilisateurs réels et virtuels
 │   │   ├── Cra.php                 Jours, demi-journées, notes, config périodes, stats
+│   │   ├── Leave.php               Soldes RTT / congés payés par exercice
 │   │   └── Team.php                Équipes et membres
 │   ├── Views/
 │   │   ├── auth/login.php
 │   │   ├── shared/layout.php       Layout (sidebar, thème, CSRF, PWA, mobile)
 │   │   ├── cra/year.php            Vue annuelle + gestion périodes de config
 │   │   ├── cra/month.php           Vue mensuelle + demi-journées SVG
+│   │   ├── cra/soldes.php          Soldes RTT / congés, droits et historique
 │   │   ├── admin/                  Vues d'administration
 │   │   └── teams/                  Vues des équipes
 │   └── Core/
@@ -279,6 +282,27 @@ cra/
 ```
 
 ---
+
+## Soldes RTT et congés payés
+
+Menu **Soldes RTT / CP** (et cartes récapitulatives dans la vue annuelle).
+
+**Exercice** : du 1er juin au 31 mai (exercice `2026-2027` = 01/06/2026 → 31/05/2027), identique pour les RTT et les congés payés.
+
+| Donnée | Origine |
+|--------|---------|
+| Droits de l'exercice | Saisis par l'utilisateur |
+| Report | Saisi par l'utilisateur. Congés payés : pré-rempli avec le solde restant de l'exercice précédent. RTT : à saisir à la main (le report dépend de l'employeur) |
+| Jours **pris** | Calculés : jours `r` / `c` saisis dans le CRA jusqu'à aujourd'hui (demi-journée = 0,5) |
+| Jours **posés** | Calculés : jours `r` / `c` saisis après aujourd'hui |
+| Solde à ce jour | droits + report − pris |
+| Solde prévisionnel | droits + report − pris − posés |
+
+Remarques :
+- Les valeurs sont acceptées en jours entiers ou demi-journées (`12` ou `12,5`), pas `12,3`.
+- Le décompte suit la même règle que les statistiques de la vue annuelle (une demi-journée saisie seule compte comme une journée complète).
+- Un compte réel ne modifie que ses propres droits. Le responsable d'équipe et l'admin peuvent saisir ceux des **comptes virtuels**.
+- Changer d'exercice se fait avec les flèches en haut de la page ; l'historique résume tous les exercices saisis.
 
 ## Types de journées
 

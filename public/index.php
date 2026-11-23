@@ -56,6 +56,9 @@ $router->post('cra/config',              'CraController@saveConfig');
 $router->post('cra/config/period',       'CraController@saveConfigPeriod');
 $router->post('cra/config/period/delete','CraController@deleteConfigPeriod');
 $router->get('cra/export/{year}',        'CraController@export');
+$router->post('cra/soldes/save',         'CraController@saveSoldes');
+$router->get('cra/soldes',               'CraController@soldes');
+$router->get('cra/soldes/{period}',      'CraController@soldes');
 
 // ── DÉLÉGATION ────────────────────────────────────────────────────────────────
 $router->get('view/{uid}/year/{year}',          'CraController@viewYear');

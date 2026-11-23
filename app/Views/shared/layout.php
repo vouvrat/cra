@@ -326,6 +326,10 @@ $isAdmin = ($me['role'] ?? '') === 'admin';
        href="<?= BASE_URL ?>cra/year/<?= $curYear ?>">
       <span class="ico">📅</span> Vue annuelle
     </a>
+    <a class="sb-link <?= (($view??'')==='soldes') ? 'active':'' ?>"
+       href="<?= BASE_URL ?>cra/soldes">
+      <span class="ico">🏖</span> Soldes RTT / CP
+    </a>
     <?php $months=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     for ($m=1;$m<=12;$m++): ?>
     <a class="sb-link <?= (!$readonly && ($view??'')==='month' && ($month??0)===$m) ? 'active':'' ?>"
@@ -406,6 +410,7 @@ $isAdmin = ($me['role'] ?? '') === 'admin';
   $viewMap = [
     'year'            => '/Views/cra/year.php',
     'month'           => '/Views/cra/month.php',
+    'soldes'          => '/Views/cra/soldes.php',
     'admin_dashboard' => '/Views/admin/dashboard_content.php',
     'admin_users'     => '/Views/admin/users_content.php',
     'admin_deleg'     => '/Views/admin/deleg_content.php',
